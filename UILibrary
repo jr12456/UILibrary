@@ -1,1 +1,3076 @@
+                                                                                                                -- // START \\ --
 
+
+--// Refresh UI
+
+if _G.UIConnections then else _G.UIConnections = {}; end
+if _G.KeybindsConnections then else _G.KeybindsConnections = {}; end
+
+for _, Instance in pairs(game.CoreGui:GetChildren()) do
+    if Instance.Name == "UILibrary" or Instance.Name == "SettingStorage" then
+        Instance:Destroy()
+    end
+end
+
+for Index, Connection in pairs(_G.UIConnections) do
+	if Connection.Connection then
+		Connection.Connection:Disconnect();
+		_G.UIConnections[Index] = nil;
+		print("Removed Connection");
+	end
+end
+--// Tables
+local Library    			 = {};
+local Menus      			= {};
+local TotalMenus 		= {};
+local NotDraggable      = {};
+local ExpandedTabs 		= {};
+local DebounceTabs 		= {};
+local DebounceMenus 	= {};
+local OpenTabs 	 	       = {};
+local Keybinds 	            = {};
+
+--// Variables
+local Player 							= game.Players.LocalPlayer
+local Mouse 							= Player:GetMouse()
+local LastGuiPosition 				= 0.0952801406
+local CurrentMovingFrame     = nil
+local HoldingLeftClick            = false
+local OldTime                        = tick()
+local OldX                              = Mouse.X
+local CurrentTween                 = nil
+local CurrentRotationTween   = nil
+local Dragging                      = false
+local LastOpen                    = tick();
+local IsOpen                       = false;
+local Listening = false;
+local ToggleKey 				= Enum.KeyCode.RightControl;
+
+--// Services
+local UserInputService      = game:GetService("UserInputService")
+local TweenService           = game:GetService("TweenService")
+
+--// Globals
+_G.UIConnections = {};
+_G.KeybindsConnections = {};
+
+--// Local Instances
+local UILibrary = Instance.new("ScreenGui")
+local RainbowBackground = Instance.new("Frame")
+local RainbowImage = Instance.new("ImageLabel")
+local UIGradient = Instance.new("UIGradient")
+local RainbowOutline = Instance.new("ImageLabel")
+local UIGradient_2 = Instance.new("UIGradient")
+local HintTemplate = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local Line = Instance.new("Frame")
+local Description = Instance.new("TextLabel")
+
+--// Local Functions
+local function CheckForHovering(Object)
+	local X = Object.AbsolutePosition.X
+	local Y = Object.AbsolutePosition.Y
+	local XX = X + Object.AbsoluteSize.X
+	local YY = Y + Object.AbsoluteSize.Y
+	if Mouse.X >= X and Mouse.Y >= Y and Mouse.X <= XX and Mouse.Y <= YY then
+		return true
+	end
+end
+
+local function AddRainbowValue(Object)
+	local RainbowValue = Instance.new("BoolValue");
+	RainbowValue.Name = "Rainbow";
+	RainbowValue.Parent = Object;
+end
+
+local function Rainbow(Object)
+	if not Object:FindFirstChild("Rainbow") then
+		AddRainbowValue(Object)
+	end
+
+	-- Add To Rainbow Table (Fixes Rainbow)
+	if Menus[Object] == nil then
+		Menus[Object] = Object
+	end
+
+	-- Set Rainbow Value
+
+	Object.Rainbow.Value = not Object.Rainbow.Value;
+end
+
+--Properties:
+
+UILibrary.Name = "UILibrary"
+UILibrary.Parent = game.CoreGui
+UILibrary.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+RainbowBackground.Name = "RainbowBackground"
+RainbowBackground.Parent = UILibrary
+RainbowBackground.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+RainbowBackground.BackgroundTransparency = 1.000
+RainbowBackground.Position = UDim2.new(0.106366463, 0, 0.905448735, 0)
+RainbowBackground.Size = UDim2.new(0, 100, 0, 100)
+
+RainbowImage.Parent = RainbowBackground
+RainbowImage.BackgroundColor3 = Color3.fromRGB(18, 3, 43)
+RainbowImage.BackgroundTransparency = 1.000
+RainbowImage.Position = UDim2.new(-3.49530554, 0, -13.5979309, 0)
+RainbowImage.Size = UDim2.new(0, 2135, 0, 1487)
+RainbowImage.ZIndex = 0
+RainbowImage.Image = "rbxassetid://8231182194"
+RainbowImage.ImageColor3 = Color3.fromRGB(83, 109, 255)
+RainbowImage.Visible = false
+
+UIGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(0.51, Color3.fromRGB(67, 67, 67)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 255, 255))}
+UIGradient.Rotation = 90
+UIGradient.Parent = RainbowImage
+
+RainbowOutline.Name = "RainbowOutline"
+RainbowOutline.Parent = RainbowBackground
+RainbowOutline.BackgroundColor3 = Color3.fromRGB(18, 3, 43)
+RainbowOutline.BackgroundTransparency = 1.000
+RainbowOutline.Position = UDim2.new(-3.49530554, 0, -13.5979309, 0)
+RainbowOutline.Size = UDim2.new(0, 2135, 0, 1487)
+RainbowOutline.ZIndex = 0
+RainbowOutline.Image = "rbxassetid://8231182194"
+RainbowOutline.ImageColor3 = Color3.fromRGB(83, 109, 255)
+RainbowOutline.Visible = false
+
+UIGradient_2.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(0.51, Color3.fromRGB(67, 67, 67)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 255, 255))}
+UIGradient_2.Rotation = 90
+UIGradient_2.Parent = RainbowOutline
+
+HintTemplate.Name = "HintTemplate"
+HintTemplate.Parent = UILibrary
+HintTemplate.BackgroundColor3 = Color3.fromRGB(47, 47, 47)
+HintTemplate.BackgroundTransparency = 0.400
+HintTemplate.Position = UDim2.new(0.480590016, 0, 0.503205121, 0)
+HintTemplate.Size = UDim2.new(0, 204, 0, 108)
+HintTemplate.Visible = false
+HintTemplate.ZIndex = 30
+
+Title.Name = "Title"
+Title.Parent = HintTemplate
+Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundTransparency = 1.000
+Title.Position = UDim2.new(0.205882356, 0, 0, 0)
+Title.Size = UDim2.new(0, 127, 0, 33)
+Title.Font = Enum.Font.Cartoon
+Title.Text = "<b> Name </b>"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextScaled = true
+Title.TextSize = 14.000
+Title.TextStrokeTransparency = 0.000
+Title.TextWrapped = true
+Title.RichText = true
+
+Line.Name = "Line"
+Line.Parent = HintTemplate
+Line.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Line.Position = UDim2.new(0, 0, 0.299270064, 0)
+Line.Size = UDim2.new(0, 204, 0, 1)
+
+Description.Name = "Description"
+Description.Parent = HintTemplate
+Description.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Description.BackgroundTransparency = 1.000
+Description.Position = UDim2.new(0.0294117648, 0, 0, 0)
+Description.Size = UDim2.new(0, 198, 0, 107)
+Description.Font = Enum.Font.Cartoon
+Description.Text = "hello guys and welcome"
+Description.TextColor3 = Color3.fromRGB(255, 255, 255)
+Description.TextSize = 14.000
+Description.TextStrokeTransparency = 0.000
+Description.TextWrapped = true
+Description.TextXAlignment = Enum.TextXAlignment.Left
+
+--// Create Instances (Rainbow, SettingsStorage)
+
+for _, Object in pairs(UILibrary:GetDescendants()) do
+	local Rainbow = Instance.new("BoolValue");
+	Rainbow.Name = "Rainbow";
+	Rainbow.Parent = Object;
+end
+
+-- Gui to Lua
+-- Version: 3.2
+
+-- Instances:
+
+local SettingStorage = Instance.new("Folder")
+local FlyToggleSettingTemplate = Instance.new("TextLabel")
+local ToggleButton = Instance.new("ImageButton")
+local ToggledOn = Instance.new("ImageLabel")
+local TeleportSettingButton = Instance.new("Frame")
+local Background = Instance.new("Frame")
+local TextLabel = Instance.new("TextLabel")
+local Toggled = Instance.new("ImageLabel")
+local Button = Instance.new("TextButton")
+local FlySettingKeybind = Instance.new("Frame")
+local Background_2 = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local Key = Instance.new("TextLabel")
+local Button_2 = Instance.new("TextButton")
+local Slide = Instance.new("Frame")
+local UIGradient = Instance.new("UIGradient")
+local TextLabel_2 = Instance.new("TextLabel")
+local Background_3 = Instance.new("Frame")
+local UIGradient_2 = Instance.new("UIGradient")
+
+--Properties:
+
+SettingStorage.Name = "SettingStorage"
+SettingStorage.Parent = game.CoreGui
+
+FlyToggleSettingTemplate.Name = "ToggleSettingTemplate"
+FlyToggleSettingTemplate.Parent = SettingStorage
+FlyToggleSettingTemplate.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+FlyToggleSettingTemplate.BackgroundTransparency = 1.000
+FlyToggleSettingTemplate.Position = UDim2.new(0, 0, 0.633136094, 0)
+FlyToggleSettingTemplate.Size = UDim2.new(0, 176, 0, 32)
+FlyToggleSettingTemplate.Font = Enum.Font.Cartoon
+FlyToggleSettingTemplate.Text = "Fly Mode Active"
+FlyToggleSettingTemplate.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlyToggleSettingTemplate.TextSize = 24.000
+FlyToggleSettingTemplate.TextStrokeTransparency = 0.000
+FlyToggleSettingTemplate.TextXAlignment = Enum.TextXAlignment.Left
+
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = FlyToggleSettingTemplate
+ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.BackgroundTransparency = 1.000
+ToggleButton.Position = UDim2.new(0.857954562, 0, 0, 0)
+ToggleButton.Size = UDim2.new(0, 56, 0, 32)
+ToggleButton.ZIndex = 3
+ToggleButton.Image = "rbxassetid://10265871605"
+ToggleButton.ImageColor3 = Color3.new(0, 0, 0)
+
+ToggledOn.Name = "ToggledOn"
+ToggledOn.Parent = FlyToggleSettingTemplate
+ToggledOn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ToggledOn.BackgroundTransparency = 1.000
+ToggledOn.Position = UDim2.new(1.01999998, 0, 0.540000021, 0)
+ToggledOn.Image = "rbxassetid://10221709930"
+
+TeleportSettingButton.Name = "SettingButton"
+TeleportSettingButton.Parent = SettingStorage
+TeleportSettingButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+TeleportSettingButton.BackgroundTransparency = 1.000
+TeleportSettingButton.ClipsDescendants = true
+TeleportSettingButton.Size = UDim2.new(0, 196, 0, 46)
+TeleportSettingButton.ZIndex = 3
+
+Background.Name = "Background"
+Background.Parent = TeleportSettingButton
+Background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Background.BackgroundTransparency = 1.000
+Background.Size = UDim2.new(0, 196, 0, 47)
+Background.ZIndex = 0
+
+TextLabel.Parent = Background
+TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel.BackgroundTransparency = 1.000
+TextLabel.Position = UDim2.new(0.034, 0,0.26, 0)
+TextLabel.Size = UDim2.new(0, 193, 0, 20)
+TextLabel.Font = Enum.Font.Cartoon
+TextLabel.Text = "Fly"
+TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel.TextSize = 30.000
+TextLabel.TextStrokeTransparency = 0.000
+TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+Toggled.Name = "Toggled"
+Toggled.Parent = Background
+Toggled.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Toggled.BackgroundTransparency = 1.000
+Toggled.Position = UDim2.new(0.887367427, 0, 0.234042555, 0)
+Toggled.Size = UDim2.new(0, 22, 0, 25)
+Toggled.Image = "rbxassetid://10228702187"
+Toggled.ImageColor3 = Color3.fromRGB(46, 210, 255)
+Toggled.ScaleType = Enum.ScaleType.Fit
+
+Button.Name = "Button"
+Button.Parent = TeleportSettingButton
+Button.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Button.BackgroundTransparency = 1.000
+Button.Size = UDim2.new(0, 200, 0, 50)
+Button.AutoButtonColor = false
+Button.Font = Enum.Font.SourceSans
+Button.Text = ""
+Button.TextColor3 = Color3.fromRGB(0, 0, 0)
+Button.TextSize = 14.000
+
+FlySettingKeybind.Name = "SettingKeybind"
+FlySettingKeybind.Parent = SettingStorage
+FlySettingKeybind.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+FlySettingKeybind.BackgroundTransparency = 1.000
+FlySettingKeybind.ClipsDescendants = true
+FlySettingKeybind.Size = UDim2.new(0, 196, 0, 46)
+FlySettingKeybind.ZIndex = 3
+
+Background_2.Name = "Background"
+Background_2.Parent = FlySettingKeybind
+Background_2.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Background_2.BackgroundTransparency = 1.000
+Background_2.Size = UDim2.new(0, 196, 0, 47)
+Background_2.ZIndex = 0
+
+Title.Name = "Title"
+Title.Parent = Background_2
+Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundTransparency = 1.000
+Title.Position = UDim2.new(0.0344827585, 0, 0, 0)
+Title.Size = UDim2.new(0, 193, 0, 50)
+Title.Font = Enum.Font.Cartoon
+Title.Text = "Keybind"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 30.000
+Title.TextStrokeTransparency = 0.000
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+Key.Name = "Key"
+Key.Parent = Background_2
+Key.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Key.BackgroundTransparency = 1.000
+Key.Position = UDim2.new(0.830877483, 0, 0.234000027, 0)
+Key.Size = UDim2.new(0, 33, 0, 28)
+Key.Font = Enum.Font.Cartoon
+Key.Text = "J"
+Key.TextColor3 = Color3.fromRGB(255, 255, 255)
+Key.TextScaled = true
+Key.TextSize = 30.000
+Key.TextStrokeTransparency = 0.000
+Key.TextWrapped = true
+
+Button_2.Name = "Button"
+Button_2.Parent = FlySettingKeybind
+Button_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Button_2.BackgroundTransparency = 1.000
+Button_2.Size = UDim2.new(0, 200, 0, 50)
+Button_2.AutoButtonColor = false
+Button_2.Font = Enum.Font.SourceSans
+Button_2.Text = ""
+Button_2.TextColor3 = Color3.fromRGB(0, 0, 0)
+Button_2.TextSize = 14.000
+
+UIGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(0.51, Color3.fromRGB(67, 67, 67)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 255, 255))}
+UIGradient.Rotation = 90
+UIGradient.Parent = Slide
+
+UIGradient_2.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(0.51, Color3.fromRGB(67, 67, 67)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 255, 255))}
+UIGradient_2.Rotation = 90
+UIGradient_2.Parent = Background_3
+
+local FlySliderSetting = Instance.new("Frame")
+local Slide = Instance.new("Frame")
+local UIGradient = Instance.new("UIGradient")
+local Background = Instance.new("Frame")
+local UIGradient_2 = Instance.new("UIGradient")
+local Title = Instance.new("TextLabel")
+
+FlySliderSetting.Name = "SliderSetting"
+FlySliderSetting.Parent = SettingStorage
+FlySliderSetting.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+FlySliderSetting.BackgroundTransparency = 1.000
+FlySliderSetting.Position = UDim2.new(0, 0, 0.316770196, 0)
+FlySliderSetting.Size = UDim2.new(0, 197, 0, 52)
+
+Slide.Name = "Slide"
+Slide.Parent = FlySliderSetting
+Slide.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Slide.Position = UDim2.new(0, 0, 0.288461536, 0)
+Slide.Size = UDim2.new(1, 0, 0, 22)
+Slide.ZIndex = 3
+
+UIGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(71, 71, 71)), ColorSequenceKeypoint.new(0.44, Color3.fromRGB(191, 191, 191)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(0.89, Color3.fromRGB(216, 216, 216)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(0, 0, 0))}
+UIGradient.Rotation = 90
+UIGradient.Parent = Slide
+
+Background.Name = "Background"
+Background.Parent = FlySliderSetting
+Background.BackgroundColor3 = Color3.fromRGB(164, 16, 255)
+Background.BorderColor3 = Color3.fromRGB(27, 42, 53)
+Background.Position = UDim2.new(0, 0, 0.288461536, 0)
+Background.Size = UDim2.new(0, 196, 0, 22)
+
+UIGradient_2.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(71, 71, 71)), ColorSequenceKeypoint.new(0.44, Color3.fromRGB(191, 191, 191)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(0.89, Color3.fromRGB(216, 216, 216)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(0, 0, 0))}
+UIGradient_2.Rotation = 90
+UIGradient_2.Parent = Background
+
+Title.Name = "Title"
+Title.Parent = FlySliderSetting
+Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundTransparency = 1.000
+Title.Position = UDim2.new(0.178571433, 0, 0.326923072, 0)
+Title.Size = UDim2.new(0, 132, 0, 22)
+Title.ZIndex = 4
+Title.Font = Enum.Font.Cartoon
+Title.Text = "Fly Speed 1 / 100"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextScaled = true
+Title.TextSize = 14.000
+Title.TextStrokeTransparency = 0.000
+Title.TextWrapped = true
+
+local Frame = Instance.new("Frame")
+local ColourWheel = Instance.new("ImageButton")
+local DarknessPicker = Instance.new("ImageButton")
+local UIGradient = Instance.new("UIGradient")
+local Slider = Instance.new("ImageLabel")
+local Picker = Instance.new("ImageLabel")
+local ColorDisplay = Instance.new("ImageButton")
+
+--Properties:
+
+Frame.Parent = SettingStorage
+Frame.Name = "ColorPickerSetting"
+Frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Frame.BackgroundTransparency = 1.000
+Frame.Size = UDim2.new(0, 100, 0, 100)
+
+ColourWheel.Name = "ColorWheel"
+ColourWheel.Parent = Frame
+ColourWheel.Active = false
+ColourWheel.AnchorPoint = Vector2.new(0.5, 0.5)
+ColourWheel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ColourWheel.BackgroundTransparency = 1.000
+ColourWheel.BorderSizePixel = 0
+ColourWheel.Position = UDim2.new(1.51158893, 0, 0.245505685, 0)
+ColourWheel.Selectable = false
+ColourWheel.Size = UDim2.new(0.567222238, 0, 0.481699407, 0)
+ColourWheel.Image = "http://www.roblox.com/asset/?id=6020299385"
+ColourWheel.ImageTransparency = 1.000
+
+DarknessPicker.Name = "DarknessPicker"
+DarknessPicker.Parent = ColourWheel
+DarknessPicker.Active = false
+DarknessPicker.AnchorPoint = Vector2.new(0.5, 0.5)
+DarknessPicker.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+DarknessPicker.BackgroundTransparency = 1.000
+DarknessPicker.BorderSizePixel = 0
+DarknessPicker.Position = UDim2.new(0.329509586, 0, 0.504561543, 0)
+DarknessPicker.Selectable = false
+DarknessPicker.Size = UDim2.new(0.0135719264, 0, 0.242390245, 0)
+DarknessPicker.ZIndex = 2
+DarknessPicker.Image = "rbxassetid://3570695787"
+DarknessPicker.ImageTransparency = 1.000
+DarknessPicker.ScaleType = Enum.ScaleType.Slice
+DarknessPicker.SliceCenter = Rect.new(100, 100, 100, 100)
+DarknessPicker.SliceScale = 0.120
+
+UIGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(0, 0, 0))}
+UIGradient.Rotation = 90
+UIGradient.Parent = DarknessPicker
+
+Slider.Name = "Slider"
+Slider.Parent = DarknessPicker
+Slider.AnchorPoint = Vector2.new(0.5, 0.5)
+Slider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Slider.BackgroundTransparency = 1.000
+Slider.BorderSizePixel = 0
+Slider.Position = UDim2.new(0.491197795, 0, 0.0733607039, 0)
+Slider.Size = UDim2.new(1.28656352, 0, 0.0265010502, 0)
+Slider.ZIndex = 2
+Slider.Image = "rbxassetid://3570695787"
+Slider.ImageColor3 = Color3.fromRGB(255, 74, 74)
+Slider.ScaleType = Enum.ScaleType.Slice
+Slider.SliceCenter = Rect.new(100, 100, 100, 100)
+Slider.SliceScale = 0.120
+
+Picker.Name = "Picker"
+Picker.Parent = ColourWheel
+Picker.AnchorPoint = Vector2.new(0.5, 0.5)
+Picker.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Picker.BackgroundTransparency = 1.000
+Picker.BorderSizePixel = 0
+Picker.Position = UDim2.new(0.5, 0, 0.5, 0)
+Picker.Size = UDim2.new(0.0900257826, 0, 0.0900257975, 0)
+Picker.Image = "http://www.roblox.com/asset/?id=3678860011"
+
+ColorDisplay.Name = "ColorDisplay"
+ColorDisplay.Parent = Frame
+ColorDisplay.Active = false
+ColorDisplay.AnchorPoint = Vector2.new(0.5, 0.5)
+ColorDisplay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ColorDisplay.BackgroundTransparency = 1.000
+ColorDisplay.BorderSizePixel = 0
+ColorDisplay.Position = UDim2.new(1.00975406, 0, 0.214561462, 0)
+ColorDisplay.Selectable = false
+ColorDisplay.Size = UDim2.new(1.70433497, 0, 0.219810814, 0)
+ColorDisplay.ZIndex = 2
+ColorDisplay.Image = "rbxassetid://3570695787"
+ColorDisplay.ScaleType = Enum.ScaleType.Slice
+ColorDisplay.SliceCenter = Rect.new(100, 100, 100, 100)
+ColorDisplay.SliceScale = 0.120
+
+--// Functions
+
+function Library:NewMenu(MenuName)
+    -- Gui to Lua
+-- Version: 3.2
+
+-- Instances:
+
+local Menu = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local Background = Instance.new("Frame")
+local UIListLayout = Instance.new("UIListLayout")
+local TextLabel = Instance.new("TextLabel")
+local UIGradient = Instance.new("UIGradient")
+local UICorner = Instance.new("UICorner")
+local Open = Instance.new("TextLabel")
+
+Rainbow(Menu)
+
+table.insert(TotalMenus, Menu);
+
+--Properties:
+
+Menu.Name = "Menu"
+Menu.Parent = UILibrary
+Menu.BackgroundColor3 = Color3.fromRGB(16, 40, 255)
+Menu.BorderSizePixel = 0
+Menu.Position = UDim2.new(0 + #TotalMenus / 7 + 0.0035, 0, 0.0842105299, 0)
+Menu.Size = UDim2.new(0, 196, 0, 46)
+Menu.ZIndex = 30
+
+Title.Name = "Title"
+Title.Parent = Menu
+Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundTransparency = 1.000
+Title.BorderSizePixel = 0
+Title.Position = UDim2.new(-0.0204081628, 0, 0.0689655766, 0)
+Title.Size = UDim2.new(0, 200, 0, 42)
+Title.Font = Enum.Font.Cartoon
+Title.Text = "<b><i> " .. MenuName .. "</i> </b>"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 30.000
+Title.TextStrokeTransparency = 0.000
+Title.TextWrapped = true
+Title.RichText = true
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+Background.Name = "Background"
+Background.Parent = Menu
+Background.BackgroundColor3 = Color3.fromRGB(42, 42, 42)
+Background.BackgroundTransparency = 0.17
+Background.ClipsDescendants = true
+Background.Position = UDim2.new(0, 0, 0.999999642, 0)
+Background.Size = UDim2.new(0, 196, 0, 0)
+Background.ZIndex = 3
+
+UIListLayout.Parent = Background
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 4)
+
+Open.Name = "Open"
+Open.Parent = Menu
+Open.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Open.BackgroundTransparency = 1.000
+Open.Position = UDim2.new(0.729591846, 0, 0.0689655766, 0)
+Open.Size = UDim2.new(0, 57, 0, 42)
+Open.Font = Enum.Font.Fantasy
+Open.Text = "<b> + </b>"
+Open.TextColor3 = Color3.fromRGB(255, 255, 255)
+Open.TextScaled = true
+Open.TextSize = 14.000
+Open.TextStrokeTransparency = 0.000
+Open.TextWrapped = true
+Open.RichText = true
+
+UIGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(71, 71, 71)), ColorSequenceKeypoint.new(0.44, Color3.fromRGB(191, 191, 191)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(0.89, Color3.fromRGB(216, 216, 216)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(0, 0, 0))}
+UIGradient.Rotation = 90
+UIGradient.Parent = Menu
+
+local BarClipping = Instance.new("Frame")
+local BarBG = Instance.new("ImageLabel")
+local Bar = Instance.new("ImageLabel")
+
+BarClipping.Name = "BarClipping"
+BarClipping.Parent = Menu
+BarClipping.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+BarClipping.BackgroundTransparency = 1.000
+BarClipping.BorderSizePixel = 0
+BarClipping.ClipsDescendants = true
+BarClipping.Size = UDim2.new(1, 0, 0.99999994, 0)
+BarClipping.ZIndex = 0
+
+BarBG.Name = "BarBG"
+BarBG.Parent = BarClipping
+BarBG.AnchorPoint = Vector2.new(0.5, 0.5)
+BarBG.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+BarBG.BackgroundTransparency = 1.000
+BarBG.BorderSizePixel = 0
+BarBG.Position = UDim2.new(0.487219214, 0, 0.491592735, 0)
+BarBG.Size = UDim2.new(0.278600216, 0, 0.0597760268, 0)
+BarBG.ZIndex = 3
+BarBG.Image = "rbxassetid://7453137378"
+
+Bar.Name = "Bar"
+Bar.Parent = BarBG
+Bar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Bar.BackgroundTransparency = 1.000
+Bar.BorderSizePixel = 0
+Bar.Position = UDim2.new(-1.32206357, 0, -12.5025387, 0)
+Bar.Size = UDim2.new(3.68093801, 0, 28.6857548, 0)
+Bar.Image = "rbxassetid://7453151254"
+Bar.ImageColor3 = Color3.fromRGB(250, 175, 255)
+
+Rainbow(Bar)
+
+
+
+                                                                                                                    -- // Open Menu \\ --
+
+--// Open Menu
+
+Mouse.Button2Down:Connect(function()
+	if not CheckForHovering(Menu) then return end
+	if not Menu:FindFirstChild("Background") then return end
+	if DebounceMenus[Menu] == true then return end;
+		DebounceMenus[Menu] = true;
+
+		task.spawn(function()
+			task.wait(1);
+			DebounceMenus[Menu] = nil;
+		end)
+
+		if Menu:FindFirstChild("Open") then -- Prevents Errors Spam
+		if IsOpen == false then
+			Menu.Open.Text = "<b> - </b>"
+		else
+			Menu.Open.Text = "<b> + </b>"
+		end
+	end
+	
+        local Instances = 0
+	
+		if Menu:FindFirstChild("Background") then
+		for _, Instance in pairs(Menu.Background:GetChildren()) do
+			if Instance:IsA("Frame") then
+				Instances += 1
+				end
+	end
+end
+	
+	if IsOpen == false then -- OPEN
+	
+			local TweenService = game:GetService("TweenService")
+			local Current = nil;
+			
+			-- Add amount of settings to Instances
+			
+			if Menu:FindFirstChild("Background") then
+			for _, Child in pairs(Menu.Background:GetChildren()) do
+				for _, Setting in pairs(Child:GetChildren()) do
+					if string.find(Setting.Name, "Setting") and not Setting:IsA("Folder") then -- Check if its a setting
+						Instances += 1
+					end
+				end
+			end
+		end
+			
+			-- Increase the size of the background
+			
+			local Size = 54 * Instances - (4 * Instances)
+			
+			Current = TweenService:Create(Menu.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Size = UDim2.new(0, 196, 0, Size)})
+			Current:Play()
+			
+			-- [[ FIX ]]
+			
+			for _, Frame in pairs(Menu.Background:GetChildren()) do
+				if Frame:IsA("Frame") then
+					Frame.Visible = true
+					Frame.Active = true
+					end
+			end
+			
+			Menu.Background.Visible = true
+			
+			-- [[----]] --
+
+			Current.Completed:Wait()
+			
+			Menu.Background.Visible = true
+
+
+
+
+
+            
+		
+	else -- Close function here
+
+
+
+
+
+
+
+        --//Close Menu
+			
+			local TweenService = game:GetService("TweenService")
+			local Current = nil;
+			
+			Current = TweenService:Create(Menu.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Size = UDim2.new(0, 196, 0, 0)})
+			Current:Play()
+			
+			NotDraggable[Menu] = true
+			
+			-- // [[ VISIBILITY FIX ]] \\ 
+
+			task.spawn(function()
+				for i = 1, 3 do
+
+					Menu.Rotation = 0
+
+					task.wait(0.1)
+				end
+			end)
+
+			-- [[----------------]] --
+	
+			Current.Completed:Wait() -- Wait until the tween finishes
+			
+	for _, Frame in pairs(Menu.Background:GetChildren()) do -- FIXES FRAMES IN MENUS
+		if Frame:IsA("Frame") then
+					Frame.Visible = false
+					Frame.Active = false
+				end	
+			end
+		end
+		
+		
+		NotDraggable[Menu] = nil
+		
+			IsOpen = not IsOpen
+end)
+
+--// End of Menu Opening Script
+
+--// Rainbow UI Adder
+local RainbowValue      = Instance.new("BoolValue");
+RainbowValue.Name = "Rainbow";
+RainbowValue.Parent = Menu;
+RainbowValue.Value = true;
+
+return Menu
+end
+
+function Library:NewToggle(ToggleName, Tab, SettingsTable, SavedState, Callback)
+
+local Fly = Instance.new("Frame")
+local Background = Instance.new("Frame")
+local TextLabel = Instance.new("TextLabel")
+local Toggled = Instance.new("Frame")
+local UIGradient = Instance.new("UIGradient")
+local UICorner = Instance.new("UICorner")
+local UIListLayout = Instance.new("UIListLayout")
+local Settings = Instance.new("Folder")
+
+--Properties:
+
+Fly.Name = "Fly"
+Fly.Parent = Tab.Background
+Fly.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Fly.BackgroundTransparency = 0
+Fly.BorderSizePixel = 0
+Fly.ClipsDescendants = true
+Fly.Size = UDim2.new(0, 196, 0, 46)
+Fly.BackgroundTransparency = 0.7
+Fly.Visible = false
+Fly.ZIndex = 3
+
+Background.Name = "Background"
+Background.Parent = Fly
+Background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Background.BackgroundTransparency = 0.47
+Background.Size = UDim2.new(0, 196, 0, 47)
+Background.ZIndex = 0
+
+TextLabel.Parent = Background
+TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel.BackgroundTransparency = 1.000
+TextLabel.Position = UDim2.new(0.0344827585, 0, 0, 0)
+TextLabel.Size = UDim2.new(0, 193, 0, 50)
+TextLabel.Font = Enum.Font.Cartoon
+TextLabel.Text = ToggleName
+TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel.TextSize = 30.000
+TextLabel.TextStrokeTransparency = 0.000
+TextLabel.RichText = true
+TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+Toggled.Name = "Toggled"
+Toggled.Parent = Background
+Toggled.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+Toggled.Position = UDim2.new(0.969246984, 0, 0, 0)
+Toggled.Size = UDim2.new(0, 6, 0, 50)
+Toggled.Visible = false
+Toggled.ZIndex = 3
+
+UIGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(0.51, Color3.fromRGB(67, 67, 67)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 255, 255))}
+UIGradient.Rotation = 90
+UIGradient.Parent = Toggled
+
+UICorner.CornerRadius = UDim.new(0, 3)
+UICorner.Parent = Toggled
+
+UIListLayout.Parent = Fly
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 4)
+
+Settings.Name = "Settings"
+Settings.Parent = Fly
+
+--// Hint Handler
+if SettingsTable.Hint then
+
+local Hinting 	 = false;
+
+Fly.Background.MouseEnter:Connect(function()
+	TweenService:Create(Fly.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Transparency = 0}):Play()
+	Hinting = true;
+	
+	local HintTable = {
+		["Title"] = SettingsTable.Hint["Title"],
+		["Description"] = SettingsTable.Hint["Description"]
+	};
+	
+	local Hint = UILibrary.HintTemplate:Clone();
+	Hint.Visible = true;
+	Hint.Parent = UILibrary;
+	
+	Hint.Title.Text = HintTable["Title"];
+	Hint.Description.Text = HintTable["Description"];
+	
+	local Connection 	= nil;
+	
+	Connection = Mouse.Move:Connect(function()
+		if Hinting == false then
+			Hint:Destroy();
+			Connection:Disconnect();
+			return
+		end
+		Hint.Position = UDim2.new(0, Mouse.X, 0, Mouse.Y);
+	end)
+end)
+
+----[[]]----
+
+
+
+Fly.Background.MouseLeave:Connect(function()
+	TweenService:Create(Fly.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Transparency = 0.4}):Play()
+	Hinting = false;
+end)
+
+end
+
+local SETTINGS_TABLE 		= {};
+
+--[[
+
+for _, Setting in pairs(Settings) do
+    if typeof(Setting) == "string" then -- Toggles, Buttons etc
+
+    local NewSetting = Instance.new("Folder");
+    NewSetting.Name = Setting;
+    NewSetting.Parent = Fly;
+
+    print("Created a typeof STRING")
+
+    elseif typeof(Setting) == "table" then -- Slider
+    else
+        error("What the")
+    end
+	
+    ]]
+
+local IsOpen    = false;
+
+--// Variables
+local FunctionTable 	= {};
+local Toggles 		      = {};
+
+--// Templates Functions
+function FunctionTable:CreateSettingToggle(SettingName, Callback)
+	for _, Template in pairs(SettingStorage:GetChildren()) do
+		if string.find(Template.Name, "Toggle") then
+
+			local Handler = {};
+			local TemplateClone = Template:Clone();
+			local ToggleNameValue = Instance.new("StringValue");
+			ToggleNameValue.Name = "ToggleName";
+			ToggleNameValue.Value = SettingName;
+			ToggleNameValue.Parent = TemplateClone;
+
+			--// Transfer to the table for Callback
+			Handler.TemplateClone = TemplateClone;
+			
+			function Handler.CallbackFunction(State)
+				pcall(function()
+				Callback(State);
+				end)
+			end
+
+			print("CREATED TOGGLE");
+			table.insert(Toggles, Handler);
+
+		end
+	end
+end
+
+function FunctionTable:CreateSettingButton(SettingName, Callback)
+	for _, Template in pairs(SettingStorage:GetChildren()) do
+		if string.find(Template.Name, "Button") then
+
+			local Handler = {};
+			Handler.ButtonName = SettingName;
+			local TemplateClone = Template:Clone();
+
+			--// Transfer to the table for Callback
+			Handler.TemplateClone = TemplateClone;
+
+			function Handler.CallbackFunction()
+				pcall(function()
+					Callback();
+				end)
+			end
+
+			print("CREATED BUTTON");
+			table.insert(Toggles, Handler);
+		end
+	end
+end
+
+function FunctionTable:CreateSettingModePicker(SettingName, ModesTable, Callback)
+	for _, Template in pairs(SettingStorage:GetChildren()) do
+		if string.find(Template.Name, "Button") then
+
+			local Handler = {};
+			Handler.Modes = ModesTable;
+			Handler.ButtonName = SettingName;
+			local TemplateClone = Template:Clone();
+			TemplateClone.Name = Fly.Name .. "ModePickerSetting";
+
+			--// Transfer to the table for Callback
+			Handler.TemplateClone = TemplateClone;
+
+			function Handler.CallbackFunction(Mode)
+				pcall(function()
+					Callback(Mode)
+				end)
+			end
+
+			print("CREATED MODE PICKER");
+			table.insert(Toggles, Handler);
+		end
+	end
+end
+
+function FunctionTable:CreateSettingSlider(SettingName, Min, Max, Start, Callback)
+	for _, Template in pairs(SettingStorage:GetChildren()) do
+		if string.find(Template.Name, "Slider") then
+
+			local Handler = {};
+			local TemplateClone = Template:Clone();
+
+			--//Transfer to the table for Callback
+			Handler.TemplateClone = TemplateClone;
+			Handler.SliderName = SettingName;
+			Handler.Start = Start;
+			Handler.Min = Min;
+			Handler.Max = Max;
+
+			function Handler.CallbackFunction(CurrentValue)
+				pcall(function()
+					Callback(CurrentValue);
+				end)
+			end
+
+			print("CREATED SLIDER");
+			table.insert(Toggles, Handler);
+		end
+	end
+end
+
+function FunctionTable:CreateSettingKeybind(SettingName, Key, Callback)
+	for _, Template in pairs(SettingStorage:GetChildren()) do
+		if string.find(Template.Name, "Keybind") then
+
+			local Handler = {};
+			local TemplateClone = Template:Clone();
+
+			--// Transfer to the table for Callback
+			Handler.TemplateClone = TemplateClone;
+			Handler.Key = Key == nil and "NONE" or Key;
+
+			function Handler.CallbackFunction()
+			end
+
+			--// Auto Keybind Function (Fix)
+			task.spawn(function()
+				if Key == nil then return end;
+
+			local Connection = nil;
+					
+					Connection = UserInputService.InputBegan:Connect(function(KeyCode, InChat)
+						if InChat then return end;
+						if Listening == true then return end
+						if KeyCode.KeyCode == Enum.KeyCode[Key.Name] then
+							Force(Fly)
+						end
+					end)
+
+					local ConnectionTable = {};
+					ConnectionTable.Fly = Fly;
+					ConnectionTable.Connection = Connection;
+
+					table.insert(_G.UIConnections, ConnectionTable);
+				end)
+
+			print("CREATED KEYBIND");
+			table.insert(Toggles, Handler);
+		end
+	end
+end
+
+function FunctionTable:CreateSettingColorPicker(StartingColor, Callback)
+	for _, Template in pairs(SettingStorage:GetChildren()) do
+		if string.find(Template.Name, "ColorPicker") then
+
+			local Handler = {};
+			local TemplateClone = Template:Clone();
+
+			--//Transfer to the table for Callback
+			Handler.TemplateClone = TemplateClone;
+			Handler.StartingColor = StartingColor;
+
+			function Handler.CallbackFunction(Color)
+				pcall(function()
+					Callback(Color);
+				end)
+			end
+
+			print("CREATED COLORPICKER");
+			table.insert(Toggles, Handler);
+		end
+	end
+end
+
+function Force(Fly3)
+		Fly3.Background.Toggled.Visible = not Fly3.Background.Toggled.Visible;
+		Rainbow(Fly3.Background.Toggled);
+		Rainbow(Fly3.Background.TextLabel);
+		IsOpen = not IsOpen;
+
+		local State = false;
+
+		if OpenTabs[Fly3] ~= true then
+		OpenTabs[Fly3] = true;
+		State = true;
+		else
+			OpenTabs[Fly3] = nil;
+			State = false;
+		end
+
+		Callback(State)
+
+end
+
+if SavedState == true then
+	Force(Fly)
+end
+
+UserInputService.InputBegan:Connect(function(Key)
+	
+	-- // [[ TOGGLING ]] \\
+	
+	if Key.UserInputType.Name == "MouseButton1" then
+		if Fly:FindFirstChild("Background") then else return end;
+
+		if CheckForHovering(Fly.Background) then
+			
+			if Fly.Visible == false then return end
+			
+			Force(Fly)
+
+		end
+	end
+	
+	-- END OF TOGGLING	
+	
+	-- // [[EXPANDING TOGGLES ]] \\
+	
+	if Key.UserInputType.Name == "MouseButton2" then
+		if Fly:FindFirstChild("Background") then else return end;
+		if Fly.Visible == false then return end;
+		
+		if CheckForHovering(Fly.Background) and not DebounceTabs[Fly] then
+			
+			local TweenService 	= game:GetService("TweenService");
+			
+			if ExpandedTabs[Fly] ~= true then
+				
+				-- Total Amount
+				
+				local SETTINGS_AMOUNT 	= 0;
+				
+				for _, TableSetting in pairs(Toggles) do
+
+
+					--// Toggle Handler
+
+					if string.find(TableSetting.TemplateClone.Name, "Toggle") then
+
+					local Setting 		= TableSetting.TemplateClone;
+		
+						local TemplateClone = Setting:Clone();
+						TemplateClone.Name = Fly.Name .. Setting.Name;
+						TemplateClone.Parent = Fly;
+						TemplateClone.Text = Setting.ToggleName.Value;
+						if string.find(Setting.Name, "Toggle") then
+						local RainbowValue = Instance.new("BoolValue");
+						RainbowValue.Name = "Rainbow";
+						RainbowValue.Parent = TemplateClone.ToggledOn;
+						end
+
+						table.insert(SETTINGS_TABLE, TemplateClone);
+
+						--// Script to turn ON and OFF Toggles
+
+						if not Fly.Settings:FindFirstChild(Setting.ToggleName.Value) then -- If it wasnt created
+							local BSetting = Instance.new("BoolValue")
+							BSetting.Name = Setting.ToggleName.Value
+								BSetting.Parent = Fly.Settings	
+							end
+							
+							local OSetting = Fly.Settings[Setting.ToggleName.Value];
+							
+							if OSetting.Value == true then -- If setting was toggled
+								
+								TemplateClone.ToggledOn.Position = UDim2.new(0.858, 0, 0, 0);
+								
+								TemplateClone.ToggledOn.Size = UDim2.new(0, 56, 0, 32);
+
+								Menus[TemplateClone.ToggledOn] = TemplateClone.ToggledOn;
+								
+								Rainbow(TemplateClone.ToggledOn);
+								
+							end
+							
+							local IsExpanded = Fly.Settings[Setting.ToggleName.Value];
+							
+							local OldPos = UDim2.new(1.02, 0, 0.54, 0);
+							local OldSize = UDim2.new(0, 0, 0, 0);
+							
+							TemplateClone.ToggleButton.MouseButton1Click:Connect(function()
+								
+								task.spawn(function()
+								
+								----[[]]----
+								if IsExpanded.Value == false then
+										
+										local CurrentTween = nil;
+										
+										CurrentTween = TweenService:Create(TemplateClone.ToggledOn, TweenInfo.new(0.3, Enum.EasingStyle.Cubic), {Position = UDim2.new(0.858, 0,0, 0), Size = UDim2.new(0, 56,0, 32)})
+										
+										CurrentTween:Play();
+										
+										Fly.Settings[Setting.ToggleName.Value].Value = true;
+
+										Menus[TemplateClone.ToggledOn] = TemplateClone.ToggledOn;
+
+										Rainbow(TemplateClone.ToggledOn);
+									
+								else
+									
+									local CurrentTween = nil;
+									
+									CurrentTween = TweenService:Create(TemplateClone.ToggledOn, TweenInfo.new(0.3, Enum.EasingStyle.Cubic), {Position = OldPos, Size = OldSize});
+									
+										CurrentTween:Play();
+										
+										Fly.Settings[Setting.ToggleName.Value].Value = false;
+
+										Menus[TemplateClone.ToggledOn] = nil;
+										
+										Rainbow(TemplateClone.ToggledOn);
+									
+									end
+								end)
+								----[[]]----
+
+
+								--// Callback
+								local State = Fly.Settings[Setting.ToggleName.Value].Value
+							TableSetting.CallbackFunction(State)
+								
+							end)
+						end
+
+						--// Button Handler
+
+					if string.find(TableSetting.TemplateClone.Name, "Button") then
+
+						local Setting = TableSetting.TemplateClone;
+
+						local TemplateClone = Setting:Clone();
+						TemplateClone.Name = Fly.Name .. Setting.Name;
+						TemplateClone.Parent = Fly;
+						TemplateClone.Background.TextLabel.Text = TableSetting.ButtonName;
+						Rainbow(TemplateClone.Background.Toggled);
+						table.insert(SETTINGS_TABLE, TemplateClone);
+
+						--// Hover Effect
+
+						TemplateClone.Background.MouseEnter:Connect(function()
+						TweenService:Create(TemplateClone.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Transparency = 0.4}):Play();
+					end)
+
+					TemplateClone.Background.MouseLeave:Connect(function()
+						TweenService:Create(TemplateClone.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Transparency = 1}):Play();
+					end)
+
+						--// Click
+
+						TemplateClone.Button.MouseButton1Click:Connect(function()
+							local function Tween(Obj,Goal)
+
+								game:GetService("TweenService"):Create(Obj,TweenInfo.new(0.47),Goal):Play()
+								
+								end
+
+								local Mouse = Player:GetMouse()
+								
+								local ASX,ASY = TemplateClone.Button.AbsoluteSize.X, TemplateClone.Button.AbsoluteSize.Y
+								
+								local APX,APY = TemplateClone.Button.AbsolutePosition.X, TemplateClone.Button.AbsolutePosition.Y
+								
+								local MX,MY = Mouse.X,Mouse.Y
+								
+								local Pos = UDim2.new(0,MX-APX,0,MY-APY)
+								
+								local UBC3 = TemplateClone.Button.BackgroundColor3
+								
+								local UR,UG,UB = UBC3.R, UBC3.G, UBC3.B
+								
+								local UI = Instance.new("Frame",TemplateClone.Button)
+								
+								UI.BackgroundColor3 = Color3.new(255, 255, 255)
+								
+								UI.Name = "Ripple"
+								
+								UI.ZIndex = 100001
+								
+								local Corner = Instance.new("UICorner",UI)
+								
+								Corner.CornerRadius = UDim.new(1,0)
+								
+								UI.AnchorPoint = Vector2.new(0.5,0.5)
+								
+								UI.Position = Pos
+								
+								local MS = UDim2.fromOffset(math.max(ASX,ASY),math.max(ASX,ASY))
+								
+								UI:TweenSize(MS,"Out","Sine",0.47)
+								
+								Tween(UI,{BackgroundTransparency = 1})
+								
+								task.spawn(function()
+									wait(0.47)
+									
+									UI:Destroy()
+									end)
+							TableSetting.CallbackFunction()
+						end)
+					end
+
+					--// ModePicker Handler
+
+					if string.find(TableSetting.TemplateClone.Name, "ModePicker") then
+						local Setting = TableSetting.TemplateClone;
+
+						local TemplateClone = Setting:Clone();
+						TemplateClone.Name = Fly.Name .. Setting.Name;
+						TemplateClone.Parent = Fly;
+						TemplateClone.Background.TextLabel.Text = "MODE: " .. TableSetting.Modes[1];
+						TemplateClone.Background.TextLabel.TextScaled = true;
+						Rainbow(TemplateClone.Background.Toggled);
+						table.insert(SETTINGS_TABLE, TemplateClone);
+
+						if not Fly.Settings:FindFirstChild(Fly.Name .. "ModePicker") then
+
+							local ModePickerValue = Instance.new("NumberValue");
+							ModePickerValue.Name = Fly.Name .. "ModePicker";
+							ModePickerValue.Value = 1
+							ModePickerValue.Parent = Fly.Settings;
+
+						else
+
+							TemplateClone.Background.TextLabel.Text = "MODE: " .. TableSetting.Modes[Fly.Settings[Fly.Name .. "ModePicker"].Value];
+
+						end
+
+						local CurrentMode = Fly.Settings[Fly.Name .. "ModePicker"];
+
+						--// Hover Effect
+
+						TemplateClone.Background.MouseEnter:Connect(function()
+						TweenService:Create(TemplateClone.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Transparency = 0.4}):Play();
+					end)
+
+					TemplateClone.Background.MouseLeave:Connect(function()
+						TweenService:Create(TemplateClone.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Transparency = 1}):Play();
+					end)
+
+						--// Click
+
+						TemplateClone.Button.MouseButton1Click:Connect(function()
+							local function Tween(Obj,Goal)
+
+								game:GetService("TweenService"):Create(Obj,TweenInfo.new(0.47),Goal):Play()
+								
+								end
+
+								local Mouse = Player:GetMouse()
+								
+								local ASX,ASY = TemplateClone.Button.AbsoluteSize.X, TemplateClone.Button.AbsoluteSize.Y
+								
+								local APX,APY = TemplateClone.Button.AbsolutePosition.X, TemplateClone.Button.AbsolutePosition.Y
+								
+								local MX,MY = Mouse.X,Mouse.Y
+								
+								local Pos = UDim2.new(0,MX-APX,0,MY-APY)
+								
+								local UBC3 = TemplateClone.Button.BackgroundColor3
+								
+								local UR,UG,UB = UBC3.R, UBC3.G, UBC3.B
+								
+								local UI = Instance.new("Frame",TemplateClone.Button)
+								
+								UI.BackgroundColor3 = Color3.new(255, 255, 255)
+								
+								UI.Name = "Ripple"
+								
+								UI.ZIndex = 100001
+								
+								local Corner = Instance.new("UICorner",UI)
+								
+								Corner.CornerRadius = UDim.new(1,0)
+								
+								UI.AnchorPoint = Vector2.new(0.5,0.5)
+								
+								UI.Position = Pos
+								
+								local MS = UDim2.fromOffset(math.max(ASX,ASY),math.max(ASX,ASY))
+								
+								UI:TweenSize(MS,"Out","Sine",0.47)
+								
+								Tween(UI,{BackgroundTransparency = 1})
+								
+								task.spawn(function()
+									wait(0.47)
+									
+									UI:Destroy()
+									end)
+
+									local Text = TemplateClone.Background.TextLabel;
+
+									CurrentMode.Value += 1;
+
+									if CurrentMode.Value > #TableSetting.Modes then
+										CurrentMode.Value = 1;
+									end
+
+									Text.Text = "MODE: " .. TableSetting.Modes[CurrentMode.Value]
+							TableSetting.CallbackFunction(TableSetting.Modes[CurrentMode.Value])
+						end)
+					end
+
+
+
+				--// Slider Handler
+
+				if string.find(TableSetting.TemplateClone.Name, "Slider") then
+
+					local Setting = TableSetting.TemplateClone;
+
+					local TemplateClone = Setting:Clone();
+					TemplateClone.Name = Fly.Name .. Setting.Name;
+					TemplateClone.Parent = Fly;
+					Rainbow(TemplateClone.Slide);
+					table.insert(SETTINGS_TABLE, TemplateClone);
+
+					local Hovering = false;
+					local Slider = TemplateClone.Slide;
+					local SliderAP = Slider.AbsolutePosition;
+					local SliderAS = Slider.AbsoluteSize;
+					local MousePos = UserInputService:GetMouseLocation();
+					local Start = TableSetting.Start;
+					local Min = math.clamp(TableSetting.Min, 1, TableSetting.Min);
+					local Max = TableSetting.Max;
+					local HoldingDown = false;
+
+					if not Fly.Settings:FindFirstChild(Fly.Name .. "SliderValue") then
+						local SliderValue = Instance.new("NumberValue");
+						SliderValue.Name = Fly.Name .. "SliderValue";
+						SliderValue.Parent = Fly.Settings;
+						Slider.Size = UDim2.new(0, Start / Max * SliderAS.X, 0, 22);
+					TemplateClone.Title.Text = TableSetting.SliderName .. ": " .. Start .. " / " .. Max;
+					
+					else
+
+						Slider.Size = UDim2.new(0, Fly.Settings[Fly.Name .. "SliderValue"].Value / Max * SliderAS.X, 0, 22);
+					TemplateClone.Title.Text = TableSetting.SliderName .. ": " .. Fly.Settings[Fly.Name .. "SliderValue"].Value .. " / " .. Max;
+
+					end
+
+					function Distance(Object)
+						local Mouse = Player:GetMouse();
+						local Magnitude = math.sqrt((Mouse.X - Object.AbsolutePosition.X) ^ 2 + (Mouse.Y - Object.AbsolutePosition.Y) ^ 2);
+						return Magnitude > -40 and Magnitude < 300;
+					end
+
+					local CurrentSize
+
+task.spawn(function()
+	while true do
+		if TemplateClone and TemplateClone:FindFirstChild("Slide") and TemplateClone:FindFirstChild("Background") and TemplateClone:FindFirstChild("Title") then
+			
+			SliderAP = Slider.AbsolutePosition;
+
+			--//Check if the mouse was close to it when clicked
+		if CheckForHovering(Slider) or CheckForHovering(TemplateClone.Background) or HoldingDown == true then
+			if Distance(TemplateClone.Background) then
+			if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+				HoldingDown = true;
+			end
+		else
+			HoldingDown = false;
+		end
+	end
+
+	if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+		HoldingDown = false;
+	end
+		
+		if HoldingDown == true then
+
+
+			local MousePos = UserInputService:GetMouseLocation();
+
+			if Mouse.X < SliderAP.X then
+				CurrentSize = UDim2.new(0, 0, 0, 22);
+
+			elseif Mouse.X > (SliderAP.X + SliderAS.X) then
+				CurrentSize = UDim2.new(0, SliderAS.X, 0, 22);
+				
+			else
+				CurrentSize = UDim2.new(0, Mouse.X - SliderAP.X, 0, 22);
+
+			end
+			
+			local Position = Mouse.X - SliderAP.X;
+			local Final = math.floor(math.clamp((Position / SliderAS.X) * Max, 1, Max));
+			TemplateClone.Title.Text = TableSetting.SliderName .. ": " .. Final .. " / " .. Max;
+			Slider.Size = CurrentSize;
+
+			Fly.Settings[Fly.Name .. "SliderValue"].Value = Final;
+
+			TableSetting.CallbackFunction(Final);
+		end
+	end
+		task.wait()
+	end
+end)
+
+				end
+
+				--// Keybind Handler
+
+				if string.find(TableSetting.TemplateClone.Name, "Keybind") then
+
+					local Setting = TableSetting.TemplateClone;
+
+					local GivenKey = tostring(TableSetting.Key == "NONE" and "NONE" or TableSetting.Key.Name)
+
+					if not Fly.Settings:FindFirstChild("KeybindSetting") then
+						
+						local KeybindSetting = Instance.new("StringValue");
+						KeybindSetting.Name = "KeybindSetting";
+						KeybindSetting.Value = GivenKey;
+						KeybindSetting.Parent = Fly.Settings;
+						
+					end
+
+					local ActualKey = tostring(Fly.Settings.KeybindSetting.Value);
+					
+					local TemplateClone = Setting:Clone();
+					TemplateClone.Name = Fly.Name .. Setting.Name;
+					TemplateClone.Parent = Fly;
+					TemplateClone.Background.Key.Text = ActualKey;
+					Fly.Settings.KeybindSetting.Value = ActualKey;
+					table.insert(SETTINGS_TABLE, TemplateClone);
+
+					--// Remove UIConnections
+					for Index, Connection in pairs(_G.UIConnections) do
+						if Connection.Fly == Fly and Connection.Connection then
+							Connection.Connection:Disconnect();
+							_G.UIConnections[Index] = nil;
+							print("Removed Connection");
+						end
+					end
+
+					--// Click
+
+					task.spawn(function()
+						
+						if not TemplateClone:FindFirstChild("Background") then return end;
+						
+					local KeyText = TemplateClone.Background.Key;
+					local OldKey = "";
+
+					TemplateClone.Button.MouseButton1Click:Connect(function()
+
+						KeyText.Text = "...";
+						Listening = true;
+
+						local Connection = nil;
+
+						Connection = UserInputService.InputBegan:Connect(function(Key, InChat)
+							if not InChat then
+							if Key.KeyCode.Name ~= "Unknown" and Key.KeyCode.Name ~= "Slash" then
+								KeyText.Text = tostring(Key.KeyCode.Name);
+
+								task.spawn(function()
+									task.wait(0.07);
+									Listening = false;
+								end)
+								Connection:Disconnect();
+							elseif Key.KeyCode.Name == "Unknown" or Key.keyCode.Name == "Slash" then
+								KeyText.Text = "NONE"
+
+								task.spawn(function()
+									task.wait(0.07);
+									Listening = false;
+								end)
+
+								Connection:Disconnect();
+							end
+					end
+				end)
+						
+					end)
+
+					if Fly then
+					if Keybinds[Fly] then Keybinds[Fly]:Disconnect() print("Removed Connection") end
+					end
+
+					local Connection = nil;
+					
+					Connection = UserInputService.InputBegan:Connect(function(Key, InChat)
+						if InChat then return end;
+						if Listening == true then return end
+						if TemplateClone == nil then Connection:Disconnect(); return end
+						if KeyText.Text == "NONE" then return end;
+						if Key.KeyCode == Enum.KeyCode[KeyText.Text] then
+							Force(Fly)
+							Fly.Settings.KeybindSetting.Value = tostring(KeyText.Text)
+						end
+					end)
+
+					Keybinds[Fly] = Connection;
+
+				end)
+				
+				end
+
+				--// Color Picker
+				
+				if string.find(TableSetting.TemplateClone.Name, "ColorPicker") then
+
+					local Setting = TableSetting.TemplateClone;
+
+					local TemplateClone = Setting:Clone();
+					TemplateClone.Name = Fly.Name .. Setting.Name;
+					TemplateClone.Parent = Fly;
+
+					if not Fly.Settings:FindFirstChild(Fly.Name .. "ColorPicker") then
+						local ColorPickerValue = Instance.new("Color3Value");
+						ColorPickerValue.Value = TableSetting.StartingColor;
+						ColorPickerValue.Name = Fly.Name .. "ColorPicker";
+						ColorPickerValue.Parent = Fly.Settings;
+					TemplateClone.ColorDisplay.ImageColor3 = TableSetting.StartingColor;
+					else
+						TemplateClone.ColorDisplay.ImageColor3 = Fly.Settings[Fly.Name .. "ColorPicker"].Value;
+					end
+
+					--// Variables
+					local Opened = false
+
+					--// Click
+
+					TemplateClone.ColorDisplay.MouseButton1Click:Connect(function()
+						if Opened then
+							TweenService:Create(TemplateClone.ColorDisplay, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {Size = UDim2.new(1.704, 0,0.22, 0), Position = UDim2.new(1.01, 0,0.215, 0)}):Play()
+							
+							TweenService:Create(TemplateClone.ColorWheel, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {ImageTransparency = 1}):Play()
+							TweenService:Create(TemplateClone.ColorWheel.Picker, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {ImageTransparency = 1}):Play()
+						else
+							TweenService:Create(TemplateClone.ColorDisplay, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {Size = UDim2.new(0.714, 0,0.32, 0), Position = UDim2.new(0.47, 0,0.2, 0)}):Play()
+							
+							task.wait(0.4)
+							
+							TweenService:Create(TemplateClone.ColorWheel, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {ImageTransparency = 0}):Play()
+							TweenService:Create(TemplateClone.ColorWheel.Picker, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {ImageTransparency = 0}):Play()
+						end
+						
+						Opened = not Opened
+					end)
+
+					local colourWheel = TemplateClone:WaitForChild("ColorWheel")
+local wheelPicker = colourWheel:WaitForChild("Picker")
+
+local darknessPicker = TemplateClone.ColorWheel:WaitForChild("DarknessPicker")
+local darknessSlider = darknessPicker:WaitForChild("Slider")
+
+
+local uis = game:GetService("UserInputService")
+
+
+local buttonDown = false
+local movingSlider = false
+
+
+local function updateColour(centreOfWheel)
+	
+	
+	local colourPickerCentre = Vector2.new(
+		wheelPicker.AbsolutePosition.X + (wheelPicker.AbsoluteSize.X/2),
+		wheelPicker.AbsolutePosition.Y + (wheelPicker.AbsoluteSize.Y/2)
+	)
+	local h = (math.pi - math.atan2(colourPickerCentre.Y - centreOfWheel.Y, colourPickerCentre.X - centreOfWheel.X)) / (math.pi * 2)
+	
+	local s = (centreOfWheel - colourPickerCentre).Magnitude / (colourWheel.AbsoluteSize.X/2)
+	
+	local v = math.abs((darknessSlider.AbsolutePosition.Y - darknessPicker.AbsolutePosition.Y) / darknessPicker.AbsoluteSize.Y - 1)
+	
+	
+	local hsv = Color3.fromHSV(math.clamp(h, 0, 1), math.clamp(s, 0, 1), math.clamp(v, 0, 1))
+
+	TemplateClone.ColorDisplay.ImageColor3 = hsv
+			Fly.Settings[Fly.Name .. "ColorPicker"].Value = hsv
+			TableSetting.CallbackFunction(hsv)
+			
+	pcall(function()
+	darknessPicker.UIGradient.Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, hsv), 
+		ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0))
+	}
+end)
+end
+
+
+colourWheel.MouseButton1Down:Connect(function()
+	buttonDown = true
+end)
+
+darknessPicker.MouseButton1Down:Connect(function()
+	movingSlider = true
+end)
+
+
+uis.InputEnded:Connect(function(input)
+	
+	if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+	
+	buttonDown = false
+	movingSlider = false
+end)
+
+
+uis.InputChanged:Connect(function(input)
+	
+	if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+	if colourWheel.ImageTransparency ~= 0 then return end
+	
+	
+	local mousePos = uis:GetMouseLocation() - Vector2.new(0, game:GetService("GuiService"):GetGuiInset().Y)
+	
+	local centreOfWheel = Vector2.new(colourWheel.AbsolutePosition.X + (colourWheel.AbsoluteSize.X/2), colourWheel.AbsolutePosition.Y + (colourWheel.AbsoluteSize.Y/2))
+	
+	local distanceFromWheel = (mousePos - centreOfWheel).Magnitude
+	
+	
+	if distanceFromWheel <= colourWheel.AbsoluteSize.X/2 and buttonDown then
+		
+		wheelPicker.Position = UDim2.new(0, mousePos.X - colourWheel.AbsolutePosition.X, 0, mousePos.Y - colourWheel.AbsolutePosition.Y)
+		updateColour(centreOfWheel)
+
+		
+	elseif movingSlider then
+		
+		darknessSlider.Position = UDim2.new(darknessSlider.Position.X.Scale, 0, 0, 
+			math.clamp(
+			mousePos.Y - darknessPicker.AbsolutePosition.Y, 
+			0, 
+			darknessPicker.AbsoluteSize.Y)
+		)
+	end
+end)
+
+					table.insert(SETTINGS_TABLE, TemplateClone);
+			end
+		end
+				
+				----
+				
+				local Menu 	= Fly;
+				
+				local CurrentTween = nil;
+				
+				local Instances = 0
+
+					local TweenService = game:GetService("TweenService")
+					local Current = nil;
+
+					-- Add amount of settings to Instances
+
+						for _, Setting in pairs(Fly:GetChildren()) do
+							if string.find(Setting.Name, "Setting") and not Setting:IsA("Folder") then -- Check if its a setting
+								Instances += 1
+							end
+						end
+
+					-- Increase the size of the background
+
+				local Size = 54 * Instances - (4 * Instances)
+				print(Instances .. " IS THE AMOUNT")
+				
+				CurrentTween = TweenService:Create(Fly, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {Size = Fly.Size + UDim2.new(0, 0, 0, Size)});
+				
+				CurrentTween:Play();
+				
+				CurrentTween = TweenService:Create(Fly.Parent, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {Size = Fly.Parent.Size + UDim2.new(0, 0, 0, Size)});
+
+				CurrentTween:Play();
+				
+				
+				-- Set it back
+				
+				task.spawn(function()
+				
+				CurrentTween.Completed:Wait() -- Wait until it finishes
+					
+				end)
+				
+				
+			else -- CLOSE
+				
+				local SETTINGS_AMOUNT 	= #SETTINGS_TABLE;
+				
+				print(SETTINGS_AMOUNT)
+
+				----
+
+				local Menu 	= Fly;
+
+				local CurrentTween = nil;
+
+				local Instances = 0
+
+				local TweenService = game:GetService("TweenService")
+				local Current = nil;
+
+				-- Add amount of settings to Instances
+
+				for _, Setting in pairs(Fly:GetChildren()) do
+					if string.find(Setting.Name, "Setting") and not Setting:IsA("Folder") then -- Check if its a setting
+						Instances += 1
+					end
+				end
+
+				-- Increase the size of the background
+
+				local Size = 54 * Instances - (4 * Instances)
+				print(Instances .. " IS THE AMOUNT")
+
+				CurrentTween = TweenService:Create(Fly.Parent, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {Size = Fly.Parent.Size - UDim2.new(0, 0, 0, Size)});
+
+				CurrentTween:Play();
+				
+				TweenService:Create(Fly, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {Size = Fly.Size - UDim2.new(0, 0, 0, Size)}):Play();
+				
+				task.spawn(function()
+					
+					task.wait(0.7)
+					
+					-- Remove all settings
+					for Index, Setting in pairs(SETTINGS_TABLE) do
+						Setting:Destroy()
+					end
+					
+					SETTINGS_TABLE = {};
+					
+				end)
+				
+			end
+			
+			ExpandedTabs[Fly] = not ExpandedTabs[Fly];
+			DebounceTabs[Fly] = true; -- Cooldown
+			
+			task.spawn(function()
+				task.wait(0.7);
+				DebounceTabs[Fly] = nil;
+			end)
+			
+		end
+	end
+end)
+
+return FunctionTable
+
+end
+
+function Library:NewButton(ButtonName, Tab, SettingsTable, Callback)
+	local Fly = Instance.new("Frame")
+local Background = Instance.new("Frame")
+local TextLabel = Instance.new("TextLabel")
+local Toggled = Instance.new("Frame")
+local UIGradient = Instance.new("UIGradient")
+local UICorner = Instance.new("UICorner")
+local UIListLayout = Instance.new("UIListLayout")
+local Settings = Instance.new("Folder")
+
+local Fly
+	for _, Template in pairs(SettingStorage:GetChildren()) do
+		if string.find(Template.Name, "Button") then
+
+			local TemplateClone = Template:Clone();
+			TemplateClone.Name = ButtonName .. "Button";
+			TemplateClone.Parent = Tab.Background;
+			TemplateClone.Button.Parent = TemplateClone.Background;
+			Fly = TemplateClone;
+		end
+	end
+
+UIListLayout.Parent = Fly
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 4)
+
+Settings.Name = "Settings"
+Settings.Parent = Fly
+
+--// Hint Handler
+if SettingsTable.Hint then
+
+local Hinting 	 = false;
+
+Fly.Background.MouseEnter:Connect(function()
+	TweenService:Create(Fly.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Transparency = 0}):Play()
+	Hinting = true;
+	
+	local HintTable = {
+		["Title"] = SettingsTable.Hint["Title"],
+		["Description"] = SettingsTable.Hint["Description"]
+	};
+	
+	local Hint = UILibrary.HintTemplate:Clone();
+	Hint.Visible = true;
+	Hint.Parent = UILibrary;
+	
+	Hint.Title.Text = HintTable["Title"];
+	Hint.Description.Text = HintTable["Description"];
+	
+	local Connection 	= nil;
+	
+	Connection = Mouse.Move:Connect(function()
+		if Hinting == false then
+			Hint:Destroy();
+			Connection:Disconnect();
+			return
+		end
+		Hint.Position = UDim2.new(0, Mouse.X, 0, Mouse.Y);
+	end)
+end)
+
+----[[]]----
+
+
+
+Fly.Background.MouseLeave:Connect(function()
+	TweenService:Create(Fly.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Transparency = 0.4}):Play()
+	Hinting = false;
+end)
+
+end
+
+local SETTINGS_TABLE 		= {};
+
+--[[
+
+for _, Setting in pairs(Settings) do
+    if typeof(Setting) == "string" then -- Toggles, Buttons etc
+
+    local NewSetting = Instance.new("Folder");
+    NewSetting.Name = Setting;
+    NewSetting.Parent = Fly;
+
+    print("Created a typeof STRING")
+
+    elseif typeof(Setting) == "table" then -- Slider
+    else
+        error("What the")
+    end
+	
+    ]]
+
+local IsOpen    = false;
+
+--// Variables
+local FunctionTable 	= {};
+local Toggles 		      = {};
+
+--// Templates Functions
+function FunctionTable:CreateSettingToggle(SettingName, Callback)
+	for _, Template in pairs(SettingStorage:GetChildren()) do
+		if string.find(Template.Name, "Toggle") then
+
+			local Handler = {};
+			local TemplateClone = Template:Clone();
+			local ToggleNameValue = Instance.new("StringValue");
+			ToggleNameValue.Name = "ToggleName";
+			ToggleNameValue.Value = SettingName;
+			ToggleNameValue.Parent = TemplateClone;
+
+			--// Transfer to the table for Callback
+			Handler.TemplateClone = TemplateClone;
+			
+			function Handler.CallbackFunction(State)
+				pcall(function()
+				Callback(State);
+				end)
+			end
+
+			print("CREATED TOGGLE");
+			table.insert(Toggles, Handler);
+
+		end
+	end
+end
+
+function FunctionTable:CreateSettingSlider(SettingName, Min, Max, Start, Callback)
+	for _, Template in pairs(SettingStorage:GetChildren()) do
+		if string.find(Template.Name, "Slider") then
+
+			local Handler = {};
+			local TemplateClone = Template:Clone();
+
+			--//Transfer to the table for Callback
+			Handler.TemplateClone = TemplateClone;
+			Handler.SliderName = SettingName;
+			Handler.Start = Start;
+			Handler.Min = Min;
+			Handler.Max = Max;
+
+			function Handler.CallbackFunction(CurrentValue)
+				pcall(function()
+					Callback(CurrentValue);
+				end)
+			end
+
+			print("CREATED SLIDER");
+			table.insert(Toggles, Handler);
+		end
+	end
+end
+
+function FunctionTable:CreateSettingKeybind(SettingName, Key, Callback)
+	for _, Template in pairs(SettingStorage:GetChildren()) do
+		if string.find(Template.Name, "Keybind") then
+
+			local Handler = {};
+			local TemplateClone = Template:Clone();
+
+			--// Transfer to the table for Callback
+			Handler.TemplateClone = TemplateClone;
+			Handler.Key = Key == nil and "NONE" or Key;
+
+			function Handler.CallbackFunction()
+			end
+
+			--// Auto Keybind Function (Fix)
+			task.spawn(function()
+				if Key == nil then return end;
+
+			local Connection = nil;
+					
+					Connection = UserInputService.InputBegan:Connect(function(KeyCode, InChat)
+						if InChat then return end;
+						if Listening == true then return end
+						if KeyCode.KeyCode == Enum.KeyCode[Key.Name] then
+							Force(Fly)
+						end
+					end)
+
+					local ConnectionTable = {};
+					ConnectionTable.Fly = Fly;
+					ConnectionTable.Connection = Connection;
+
+					table.insert(_G.UIConnections, ConnectionTable);
+				end)
+
+			print("CREATED KEYBIND");
+			table.insert(Toggles, Handler);
+		end
+	end
+end
+
+function FunctionTable:CreateSettingColorPicker(StartingColor, Callback)
+	for _, Template in pairs(SettingStorage:GetChildren()) do
+		if string.find(Template.Name, "ColorPicker") then
+
+			local Handler = {};
+			local TemplateClone = Template:Clone();
+
+			--//Transfer to the table for Callback
+			Handler.TemplateClone = TemplateClone;
+			Handler.StartingColor = StartingColor;
+
+			function Handler.CallbackFunction(Color)
+				pcall(function()
+					Callback(Color);
+				end)
+			end
+
+			print("CREATED COLORPICKER");
+			table.insert(Toggles, Handler);
+		end
+	end
+end
+
+function Force3(Fly3, Clicked)
+
+	if not Fly3:FindFirstChild("Background") then return end;
+	if not Fly3.Background:FindFirstChild("Button") then return end;
+
+	--// Hover Effect
+
+	Fly3.Background.MouseEnter:Connect(function()
+		TweenService:Create(Fly3.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Transparency = 0}):Play();
+	end)
+
+	Fly3.Background.MouseLeave:Connect(function()
+		TweenService:Create(Fly3.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Transparency = 0.4}):Play();
+	end)
+
+		--// Click
+
+			local function Tween(Obj,Goal)
+
+				game:GetService("TweenService"):Create(Obj,TweenInfo.new(0.47),Goal):Play()
+				
+				end
+
+				local Mouse = Player:GetMouse()
+				
+				local ASX,ASY = Fly3.Background.Button.AbsoluteSize.X, Fly3.Background.Button.AbsoluteSize.Y
+				
+				local APX,APY = Fly3.Background.Button.AbsolutePosition.X, Fly3.Background.Button.AbsolutePosition.Y
+				
+				local MX,MY = Mouse.X,Mouse.Y
+				
+				local Pos = Clicked ~= true and UDim2.new(0,MX-APX,0,MY-APY) or UDim2.new(0,ASX / 2,0,ASY / 2)
+				
+				local UBC3 = Fly3.Background.Button.BackgroundColor3
+				
+				local UR,UG,UB = UBC3.R, UBC3.G, UBC3.B
+				
+				local UI = Instance.new("Frame",Fly3.Background)
+				
+				UI.BackgroundColor3 = Color3.new(255, 255, 255)
+				
+				UI.Name = "Ripple"
+				
+				UI.ZIndex = 100001
+				
+				local Corner = Instance.new("UICorner",UI)
+				
+				Corner.CornerRadius = UDim.new(1,0)
+				
+				UI.AnchorPoint = Vector2.new(0.5,0.5)
+				
+				UI.Position = Pos
+				
+				local MS = UDim2.fromOffset(math.max(ASX,ASY),math.max(ASX,ASY))
+				
+				UI:TweenSize(MS,"Out","Sine",0.47)
+				
+				Tween(UI,{BackgroundTransparency = 1})
+				
+				task.spawn(function()
+				wait(0.47)
+				
+				UI:Destroy()
+				end)
+
+		Callback()
+
+end
+
+UserInputService.InputBegan:Connect(function(Key)
+	
+	-- // [[ TOGGLING ]] \\
+	
+	if Key.UserInputType.Name == "MouseButton1" then
+		if Fly:FindFirstChild("Background") then else return end;
+
+		if CheckForHovering(Fly.Background) then
+			
+			if Fly.Visible == false then return end
+			
+			Force3(Fly)
+
+		end
+	end
+	
+	-- END OF TOGGLING	
+	
+	-- // [[EXPANDING TOGGLES ]] \\
+	
+	if Key.UserInputType.Name == "MouseButton2" then
+		if Fly:FindFirstChild("Background") then else return end;
+		if Fly.Visible == false then return end;
+		
+		if CheckForHovering(Fly.Background) and not DebounceTabs[Fly] then
+			
+			local TweenService 	= game:GetService("TweenService");
+			
+			if ExpandedTabs[Fly] ~= true then
+				
+				-- Total Amount
+				
+				local SETTINGS_AMOUNT 	= 0;
+				
+				for _, TableSetting in pairs(Toggles) do
+
+
+					--// Toggle Handler
+
+					if string.find(TableSetting.TemplateClone.Name, "Toggle") then
+
+					local Setting 		= TableSetting.TemplateClone;
+		
+						local TemplateClone = Setting:Clone();
+						TemplateClone.Name = Fly.Name .. Setting.Name;
+						TemplateClone.Parent = Fly;
+						TemplateClone.Text = Setting.ToggleName.Value;
+						if string.find(Setting.Name, "Toggle") then
+						local RainbowValue = Instance.new("BoolValue");
+						RainbowValue.Name = "Rainbow";
+						RainbowValue.Parent = TemplateClone.ToggledOn;
+						end
+
+						table.insert(SETTINGS_TABLE, TemplateClone);
+
+						--// Script to turn ON and OFF Toggles
+
+						if not Fly.Settings:FindFirstChild(Setting.ToggleName.Value) then -- If it wasnt created
+							local BSetting = Instance.new("BoolValue")
+							BSetting.Name = Setting.ToggleName.Value
+								BSetting.Parent = Fly.Settings	
+							end
+							
+							local OSetting = Fly.Settings[Setting.ToggleName.Value];
+							
+							if OSetting.Value == true then -- If setting was toggled
+								
+								TemplateClone.ToggledOn.Position = UDim2.new(0.858, 0, 0, 0);
+								
+								TemplateClone.ToggledOn.Size = UDim2.new(0, 56, 0, 32);
+
+								Menus[TemplateClone.ToggledOn] = TemplateClone.ToggledOn;
+								
+								Rainbow(TemplateClone.ToggledOn);
+								
+							end
+							
+							local IsExpanded = Fly.Settings[Setting.ToggleName.Value];
+							
+							local OldPos = UDim2.new(1.02, 0, 0.54, 0);
+							local OldSize = UDim2.new(0, 0, 0, 0);
+							
+							TemplateClone.ToggleButton.MouseButton1Click:Connect(function()
+								
+								task.spawn(function()
+								
+								----[[]]----
+								if IsExpanded.Value == false then
+										
+										local CurrentTween = nil;
+										
+										CurrentTween = TweenService:Create(TemplateClone.ToggledOn, TweenInfo.new(0.3, Enum.EasingStyle.Cubic), {Position = UDim2.new(0.858, 0,0, 0), Size = UDim2.new(0, 56,0, 32)})
+										
+										CurrentTween:Play();
+										
+										Fly.Settings[Setting.ToggleName.Value].Value = true;
+
+										Menus[TemplateClone.ToggledOn] = TemplateClone.ToggledOn;
+
+										Rainbow(TemplateClone.ToggledOn);
+									
+								else
+									
+									local CurrentTween = nil;
+									
+									CurrentTween = TweenService:Create(TemplateClone.ToggledOn, TweenInfo.new(0.3, Enum.EasingStyle.Cubic), {Position = OldPos, Size = OldSize});
+									
+										CurrentTween:Play();
+										
+										Fly.Settings[Setting.ToggleName.Value].Value = false;
+
+										Menus[TemplateClone.ToggledOn] = nil;
+										
+										Rainbow(TemplateClone.ToggledOn);
+									
+									end
+								end)
+								----[[]]----
+
+
+								--// Callback
+								local State = Fly.Settings[Setting.ToggleName.Value].Value
+							TableSetting.CallbackFunction(State)
+								
+							end)
+						end
+
+						--// Button Handler
+
+					if string.find(TableSetting.TemplateClone.Name, "Button") then
+
+						local Setting = TableSetting.TemplateClone;
+
+						local TemplateClone = Setting:Clone();
+						TemplateClone.Name = Fly.Name .. Setting.Name;
+						TemplateClone.Parent = Fly;
+						TemplateClone.Background.TextLabel.Text = TableSetting.ButtonName;
+						Rainbow(TemplateClone.Background.Toggled);
+						table.insert(SETTINGS_TABLE, TemplateClone);
+
+						--// Hover Effect
+
+						TemplateClone.Background.MouseEnter:Connect(function()
+						TweenService:Create(TemplateClone.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Transparency = 0.4}):Play();
+					end)
+
+					TemplateClone.Background.MouseLeave:Connect(function()
+						TweenService:Create(TemplateClone.Background, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Transparency = 1}):Play();
+					end)
+
+						--// Click
+
+						TemplateClone.Button.MouseButton1Click:Connect(function()
+							local function Tween(Obj,Goal)
+
+								game:GetService("TweenService"):Create(Obj,TweenInfo.new(0.47),Goal):Play()
+								
+								end
+
+								local Mouse = Player:GetMouse()
+								
+								local ASX,ASY = TemplateClone.Button.AbsoluteSize.X, TemplateClone.Button.AbsoluteSize.Y
+								
+								local APX,APY = TemplateClone.Button.AbsolutePosition.X, TemplateClone.Button.AbsolutePosition.Y
+								
+								local MX,MY = Mouse.X,Mouse.Y
+								
+								local Pos = UDim2.new(0,MX-APX,0,MY-APY)
+								
+								local UBC3 = TemplateClone.Button.BackgroundColor3
+								
+								local UR,UG,UB = UBC3.R, UBC3.G, UBC3.B
+								
+								local UI = Instance.new("Frame",TemplateClone.Button)
+								
+								UI.BackgroundColor3 = Color3.new(255, 255, 255)
+								
+								UI.Name = "Ripple"
+								
+								UI.ZIndex = 100001
+								
+								local Corner = Instance.new("UICorner",UI)
+								
+								Corner.CornerRadius = UDim.new(1,0)
+								
+								UI.AnchorPoint = Vector2.new(0.5,0.5)
+								
+								UI.Position = Pos
+								
+								local MS = UDim2.fromOffset(math.max(ASX,ASY),math.max(ASX,ASY))
+								
+								UI:TweenSize(MS,"Out","Sine",0.47)
+								
+								Tween(UI,{BackgroundTransparency = 1})
+								
+								task.spawn(function()
+									wait(0.47)
+									
+									UI:Destroy()
+									end)
+							TableSetting.CallbackFunction()
+						end)
+					end
+
+				--// Slider Handler
+
+				if string.find(TableSetting.TemplateClone.Name, "Slider") then
+
+					local Setting = TableSetting.TemplateClone;
+
+					local TemplateClone = Setting:Clone();
+					TemplateClone.Name = Fly.Name .. Setting.Name;
+					TemplateClone.Parent = Fly;
+					Rainbow(TemplateClone.Slide);
+					table.insert(SETTINGS_TABLE, TemplateClone);
+
+					local Hovering = false;
+					local Slider = TemplateClone.Slide;
+					local SliderAP = Slider.AbsolutePosition;
+					local SliderAS = Slider.AbsoluteSize;
+					local MousePos = UserInputService:GetMouseLocation();
+					local Start = TableSetting.Start;
+					local Min = math.clamp(TableSetting.Min, 1, TableSetting.Min);
+					local Max = TableSetting.Max;
+					local HoldingDown = false;
+
+					if not Fly.Settings:FindFirstChild(Fly.Name .. "SliderValue") then
+						local SliderValue = Instance.new("NumberValue");
+						SliderValue.Name = Fly.Name .. "SliderValue";
+						SliderValue.Parent = Fly.Settings;
+						Slider.Size = UDim2.new(0, Start / Max * SliderAS.X, 0, 22);
+					TemplateClone.Title.Text = TableSetting.SliderName .. ": " .. Start .. " / " .. Max;
+					
+					else
+
+						Slider.Size = UDim2.new(0, Fly.Settings[Fly.Name .. "SliderValue"].Value / Max * SliderAS.X, 0, 22);
+					TemplateClone.Title.Text = TableSetting.SliderName .. ": " .. Fly.Settings[Fly.Name .. "SliderValue"].Value .. " / " .. Max;
+
+					end
+
+					function Distance(Object)
+						local Mouse = Player:GetMouse();
+						local Magnitude = math.sqrt((Mouse.X - Object.AbsolutePosition.X) ^ 2 + (Mouse.Y - Object.AbsolutePosition.Y) ^ 2);
+						return Magnitude > -40 and Magnitude < 300;
+					end
+
+					local CurrentSize
+
+task.spawn(function()
+	while true do
+		if TemplateClone and TemplateClone:FindFirstChild("Slide") and TemplateClone:FindFirstChild("Background") and TemplateClone:FindFirstChild("Title") then
+			
+			SliderAP = Slider.AbsolutePosition;
+
+			--//Check if the mouse was close to it when clicked
+		if CheckForHovering(Slider) or CheckForHovering(TemplateClone.Background) or HoldingDown == true then
+			if Distance(TemplateClone.Background) then
+			if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+				HoldingDown = true;
+			end
+		else
+			HoldingDown = false;
+		end
+	end
+
+	if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+		HoldingDown = false;
+	end
+		
+		if HoldingDown == true then
+
+
+			local MousePos = UserInputService:GetMouseLocation();
+
+			if Mouse.X < SliderAP.X then
+				CurrentSize = UDim2.new(0, 0, 0, 22);
+
+			elseif Mouse.X > (SliderAP.X + SliderAS.X) then
+				CurrentSize = UDim2.new(0, SliderAS.X, 0, 22);
+				
+			else
+				CurrentSize = UDim2.new(0, Mouse.X - SliderAP.X, 0, 22);
+
+			end
+			
+			local Position = Mouse.X - SliderAP.X;
+			local Final = math.floor(math.clamp((Position / SliderAS.X) * Max, 1, Max));
+			TemplateClone.Title.Text = TableSetting.SliderName .. ": " .. Final .. " / " .. Max;
+			Slider.Size = CurrentSize;
+
+			Fly.Settings[Fly.Name .. "SliderValue"].Value = Final;
+
+			TableSetting.CallbackFunction(Final);
+		end
+	end
+		task.wait()
+	end
+end)
+
+				end
+
+				--// Keybind Handler
+
+				if string.find(TableSetting.TemplateClone.Name, "Keybind") then
+
+					local Setting = TableSetting.TemplateClone;
+
+					local GivenKey = tostring(TableSetting.Key == "NONE" and "NONE" or TableSetting.Key.Name)
+
+					if not Fly.Settings:FindFirstChild("KeybindSetting") then
+						
+						local KeybindSetting = Instance.new("StringValue");
+						KeybindSetting.Name = "KeybindSetting";
+						KeybindSetting.Value = GivenKey;
+						KeybindSetting.Parent = Fly.Settings;
+						
+					end
+
+					local ActualKey = tostring(Fly.Settings.KeybindSetting.Value);
+					
+					local TemplateClone = Setting:Clone();
+					TemplateClone.Name = Fly.Name .. Setting.Name;
+					TemplateClone.Parent = Fly;
+					TemplateClone.Background.Key.Text = ActualKey;
+					Fly.Settings.KeybindSetting.Value = ActualKey;
+					table.insert(SETTINGS_TABLE, TemplateClone);
+
+					--// Remove UIConnections
+					for Index, Connection in pairs(_G.UIConnections) do
+						if Connection.Fly == Fly and Connection.Connection then
+							Connection.Connection:Disconnect();
+							_G.UIConnections[Index] = nil;
+							print("Removed Connection");
+						end
+					end
+
+					--// Click
+
+					task.spawn(function()
+						
+						if not TemplateClone:FindFirstChild("Background") then return end;
+						
+					local KeyText = TemplateClone.Background.Key;
+					local OldKey = "";
+
+					TemplateClone.Button.MouseButton1Click:Connect(function()
+
+						KeyText.Text = "...";
+						Listening = true;
+
+						local Connection = nil;
+
+						Connection = UserInputService.InputBegan:Connect(function(Key, InChat)
+							if not InChat then
+							if Key.KeyCode.Name ~= "Unknown" and Key.KeyCode.Name ~= "Slash" then
+								KeyText.Text = tostring(Key.KeyCode.Name);
+
+								task.spawn(function()
+									task.wait(0.07);
+									Listening = false;
+								end)
+								Connection:Disconnect();
+							elseif Key.KeyCode.Name == "Unknown" or Key.keyCode.Name == "Slash" then
+								KeyText.Text = "NONE"
+
+								task.spawn(function()
+									task.wait(0.07);
+									Listening = false;
+								end)
+
+								Connection:Disconnect();
+							end
+					end
+				end)
+						
+					end)
+
+					if Fly then
+					if Keybinds[Fly] then Keybinds[Fly]:Disconnect() print("Removed Connection") end
+					end
+
+					local Connection = nil;
+					
+					Connection = UserInputService.InputBegan:Connect(function(Key, InChat)
+						if InChat then return end;
+						if Listening == true then return end
+						if TemplateClone == nil then Connection:Disconnect(); return end
+						if KeyText.Text == "NONE" then return end;
+						if Key.KeyCode == Enum.KeyCode[KeyText.Text] then
+							Force3(Fly, true)
+							if Fly:FindFirstChild("Settings") then
+							Fly.Settings.KeybindSetting.Value = tostring(KeyText.Text)
+							end
+						end
+					end)
+
+					Keybinds[Fly] = Connection;
+
+				end)
+				
+				end
+
+				--// Color Picker
+				
+				if string.find(TableSetting.TemplateClone.Name, "ColorPicker") then
+
+					local Setting = TableSetting.TemplateClone;
+
+					local TemplateClone = Setting:Clone();
+					TemplateClone.Name = Fly.Name .. Setting.Name;
+					TemplateClone.Parent = Fly;
+
+					if not Fly.Settings:FindFirstChild(Fly.Name .. "ColorPicker") then
+						local ColorPickerValue = Instance.new("Color3Value");
+						ColorPickerValue.Value = TableSetting.StartingColor;
+						ColorPickerValue.Name = Fly.Name .. "ColorPicker";
+						ColorPickerValue.Parent = Fly.Settings;
+					TemplateClone.ColorDisplay.ImageColor3 = TableSetting.StartingColor;
+					else
+						TemplateClone.ColorDisplay.ImageColor3 = Fly.Settings[Fly.Name .. "ColorPicker"].Value;
+					end
+
+					--// Variables
+					local Opened = false
+
+					--// Click
+
+					TemplateClone.ColorDisplay.MouseButton1Click:Connect(function()
+						if Opened then
+							TweenService:Create(TemplateClone.ColorDisplay, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {Size = UDim2.new(1.704, 0,0.22, 0), Position = UDim2.new(1.01, 0,0.215, 0)}):Play()
+							
+							TweenService:Create(TemplateClone.ColorWheel, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {ImageTransparency = 1}):Play()
+							TweenService:Create(TemplateClone.ColorWheel.Picker, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {ImageTransparency = 1}):Play()
+						else
+							TweenService:Create(TemplateClone.ColorDisplay, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {Size = UDim2.new(0.714, 0,0.32, 0), Position = UDim2.new(0.47, 0,0.2, 0)}):Play()
+							
+							task.wait(0.4)
+							
+							TweenService:Create(TemplateClone.ColorWheel, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {ImageTransparency = 0}):Play()
+							TweenService:Create(TemplateClone.ColorWheel.Picker, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {ImageTransparency = 0}):Play()
+						end
+						
+						Opened = not Opened
+					end)
+
+					local colourWheel = TemplateClone:WaitForChild("ColorWheel")
+local wheelPicker = colourWheel:WaitForChild("Picker")
+
+local darknessPicker = TemplateClone.ColorWheel:WaitForChild("DarknessPicker")
+local darknessSlider = darknessPicker:WaitForChild("Slider")
+
+
+local uis = game:GetService("UserInputService")
+
+
+local buttonDown = false
+local movingSlider = false
+
+
+local function updateColour(centreOfWheel)
+	
+	
+	local colourPickerCentre = Vector2.new(
+		wheelPicker.AbsolutePosition.X + (wheelPicker.AbsoluteSize.X/2),
+		wheelPicker.AbsolutePosition.Y + (wheelPicker.AbsoluteSize.Y/2)
+	)
+	local h = (math.pi - math.atan2(colourPickerCentre.Y - centreOfWheel.Y, colourPickerCentre.X - centreOfWheel.X)) / (math.pi * 2)
+	
+	local s = (centreOfWheel - colourPickerCentre).Magnitude / (colourWheel.AbsoluteSize.X/2)
+	
+	local v = math.abs((darknessSlider.AbsolutePosition.Y - darknessPicker.AbsolutePosition.Y) / darknessPicker.AbsoluteSize.Y - 1)
+	
+	
+	local hsv = Color3.fromHSV(math.clamp(h, 0, 1), math.clamp(s, 0, 1), math.clamp(v, 0, 1))
+
+	TemplateClone.ColorDisplay.ImageColor3 = hsv
+			Fly.Settings[Fly.Name .. "ColorPicker"].Value = hsv
+			TableSetting.CallbackFunction(hsv)
+			
+	pcall(function()
+	darknessPicker.UIGradient.Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, hsv), 
+		ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0))
+	}
+end)
+end
+
+
+colourWheel.MouseButton1Down:Connect(function()
+	buttonDown = true
+end)
+
+darknessPicker.MouseButton1Down:Connect(function()
+	movingSlider = true
+end)
+
+
+uis.InputEnded:Connect(function(input)
+	
+	if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+	
+	buttonDown = false
+	movingSlider = false
+end)
+
+
+uis.InputChanged:Connect(function(input)
+	
+	if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+	if colourWheel.ImageTransparency ~= 0 then return end
+	
+	
+	local mousePos = uis:GetMouseLocation() - Vector2.new(0, game:GetService("GuiService"):GetGuiInset().Y)
+	
+	local centreOfWheel = Vector2.new(colourWheel.AbsolutePosition.X + (colourWheel.AbsoluteSize.X/2), colourWheel.AbsolutePosition.Y + (colourWheel.AbsoluteSize.Y/2))
+	
+	local distanceFromWheel = (mousePos - centreOfWheel).Magnitude
+	
+	
+	if distanceFromWheel <= colourWheel.AbsoluteSize.X/2 and buttonDown then
+		
+		wheelPicker.Position = UDim2.new(0, mousePos.X - colourWheel.AbsolutePosition.X, 0, mousePos.Y - colourWheel.AbsolutePosition.Y)
+		updateColour(centreOfWheel)
+
+		
+	elseif movingSlider then
+		
+		darknessSlider.Position = UDim2.new(darknessSlider.Position.X.Scale, 0, 0, 
+			math.clamp(
+			mousePos.Y - darknessPicker.AbsolutePosition.Y, 
+			0, 
+			darknessPicker.AbsoluteSize.Y)
+		)
+	end
+end)
+
+					table.insert(SETTINGS_TABLE, TemplateClone);
+			end
+		end
+				
+				----
+				
+				local Menu 	= Fly;
+				
+				local CurrentTween = nil;
+				
+				local Instances = 0
+
+					local TweenService = game:GetService("TweenService")
+					local Current = nil;
+
+					-- Add amount of settings to Instances
+
+						for _, Setting in pairs(Fly:GetChildren()) do
+							if string.find(Setting.Name, "Setting") and not Setting:IsA("Folder") then -- Check if its a setting
+								Instances += 1
+							end
+						end
+
+					-- Increase the size of the background
+
+				local Size = 54 * Instances - (4 * Instances)
+				print(Instances .. " IS THE AMOUNT")
+				
+				CurrentTween = TweenService:Create(Fly, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {Size = Fly.Size + UDim2.new(0, 0, 0, Size)});
+				
+				CurrentTween:Play();
+				
+				CurrentTween = TweenService:Create(Fly.Parent, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {Size = Fly.Parent.Size + UDim2.new(0, 0, 0, Size)});
+
+				CurrentTween:Play();
+				
+				
+				-- Set it back
+				
+				task.spawn(function()
+				
+				CurrentTween.Completed:Wait() -- Wait until it finishes
+					
+				end)
+				
+				
+			else -- CLOSE
+				
+				local SETTINGS_AMOUNT 	= #SETTINGS_TABLE;
+				
+				print(SETTINGS_AMOUNT)
+
+				----
+
+				local Menu 	= Fly;
+
+				local CurrentTween = nil;
+
+				local Instances = 0
+
+				local TweenService = game:GetService("TweenService")
+				local Current = nil;
+
+				-- Add amount of settings to Instances
+
+				for _, Setting in pairs(Fly:GetChildren()) do
+					if string.find(Setting.Name, "Setting") and not Setting:IsA("Folder") then -- Check if its a setting
+						Instances += 1
+					end
+				end
+
+				-- Increase the size of the background
+
+				local Size = 54 * Instances - (4 * Instances)
+				print(Instances .. " IS THE AMOUNT")
+
+				CurrentTween = TweenService:Create(Fly.Parent, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {Size = Fly.Parent.Size - UDim2.new(0, 0, 0, Size)});
+
+				CurrentTween:Play();
+				
+				TweenService:Create(Fly, TweenInfo.new(0.7, Enum.EasingStyle.Cubic), {Size = Fly.Size - UDim2.new(0, 0, 0, Size)}):Play();
+				
+				task.spawn(function()
+					
+					task.wait(0.7)
+					
+					-- Remove all settings
+					for Index, Setting in pairs(SETTINGS_TABLE) do
+						Setting:Destroy()
+					end
+					
+					SETTINGS_TABLE = {};
+					
+				end)
+				
+			end
+			
+			ExpandedTabs[Fly] = not ExpandedTabs[Fly];
+			DebounceTabs[Fly] = true; -- Cooldown
+			
+			task.spawn(function()
+				task.wait(0.7);
+				DebounceTabs[Fly] = nil;
+			end)
+			
+		end
+	end
+end)
+
+return FunctionTable
+end
+
+function Library:SwitchBackground(Mode)
+
+	for _, Background in pairs(UILibrary.RainbowBackground:GetChildren()) do
+	if Mode == "None" then
+		Background.Visible = false;
+	elseif Mode == "Transparent" then
+		Background.Visible = true;
+		if Background.Name == "RainbowOutline" then
+			Background.Visible = false;
+		end
+	elseif Mode == "Full" then
+		Background.Visible = true;
+	end
+end
+	
+end
+
+--////
+
+local SettingsWindow = Library:NewMenu("Settings")
+
+--[[local Toggle = Library:NewToggle("Mana Fly", ExploitsWindow, {
+	-- Settings
+	Hint = {
+	["Title"] = "Fly",
+	["Description"] = "This is just fly"
+	}
+}, function(State)
+	print(State)
+end)
+
+Toggle:CreateSettingToggle("Hello", function(ToggleState)
+	print(ToggleState)
+end)
+
+Toggle:CreateSettingButton("Hello", function()
+	print("Hello")
+end)
+
+Toggle:CreateSettingSlider("Fly Speed", 1, 300, 3, function(CurrentValue)
+print(CurrentValue)
+end)
+
+Toggle:CreateSettingKeybind("Keybind", nil, function()
+	Speed = not Speed;
+end)
+
+local Modes = {
+	"Hello",
+	"Another Hello",
+};
+
+Toggle:CreateSettingModePicker("Teleports", Modes, function(CurrentMode)
+	print(CurrentMode);
+end)
+
+Toggle:CreateSettingColorPicker(Color3.new(255, 255, 255), function(Color)
+	print("R: " .. Color.R * 255 .. "G: " .. Color.G * 255 .. "B: " .. Color.B * 255);
+end)]]
+
+local Toggle = Library:NewToggle("UI Settings", SettingsWindow, {}, function()
+end)
+
+local BackgroundModes = {
+	"None",
+	"Transparent",
+	"Full",
+}
+
+Toggle:CreateSettingModePicker("Background", BackgroundModes, function(Mode)
+	Library:SwitchBackground(Mode)
+end)
+
+--////
+
+
+
+--// Rainbow UI Handler
+function RainbowGui(RandomizedColor)
+	return math.acos(math.cos(RandomizedColor * math.pi)) / math.pi / 2
+end
+
+local Count = 0
+
+local CurrentTween = nil
+
+task.spawn(function()
+	while true do
+		
+		Count = Count + 0.001
+
+		for i,v in pairs(Menus) do
+			
+			if v:FindFirstChild("Rainbow") and v.Rainbow.Value == true then -- If Rainbow is on
+			
+			if v:IsA("TextButton") or v:IsA("TextLabel") then
+				
+				local TweenService = game:GetService("TweenService")
+				CurrentTween = TweenService:Create(v, TweenInfo.new(0, Enum.EasingStyle.Cubic), {TextColor3 = Color3.fromHSV(RainbowGui(Count), 0.7, 1)})
+					CurrentTween:Play()
+				
+			elseif v:IsA("Frame") then
+				
+				local TweenService = game:GetService("TweenService")
+				CurrentTween = TweenService:Create(v, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {BackgroundColor3 = Color3.fromHSV(RainbowGui(Count), 0.7, 1)})
+					CurrentTween:Play()
+				
+			elseif v:IsA("ImageButton") or v:IsA("ImageLabel") then
+				
+				local TweenService = game:GetService("TweenService")
+				CurrentTween = TweenService:Create(v, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {ImageColor3 = Color3.fromHSV(RainbowGui(Count), 0.7, 1)})
+				CurrentTween:Play()
+				
+				end
+
+			else
+
+				-- Set it back to white color
+				if v:IsA("TextButton") or v:IsA("TextLabel") then
+				local TweenService = game:GetService("TweenService")
+				CurrentTween = TweenService:Create(v, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {TextColor3 = Color3.new(255, 255, 255)})
+				CurrentTween:Play()
+				end
+
+			end
+		end
+		
+		task.wait()
+		
+	end
+end)
+
+																							-- // COMPLETELY CLOSE GUI \\ --
+
+--//Variables
+
+local LastTable 	= {};
+
+--//Functions
+
+function Library:OpenUI()
+
+	for _, Menu in pairs(UILibrary:GetChildren()) do
+		if Menu.Name == "Menu" then
+
+			Menu.Visible = true;
+
+		elseif Menu.Name == "RainbowBackground" then
+
+		end
+	end
+end
+
+function Library:CloseUI()
+
+	for _, Menu in pairs(UILibrary:GetChildren()) do
+		if Menu.Name == "Menu" then
+	
+	task.spawn(function() -- Visiblity Fix
+		for i = 1, 3 do
+			Menu.Rotation = 0
+			task.wait(0.1)
+		end
+	end)
+
+	Menu.Visible = false;
+elseif Menu.Name == "RainbowBackground" then
+	Menu.ImageLabel.Visible = false;
+	Menu.RainbowOutline.Visible = false;
+end
+end
+end
+
+--//Script
+
+local VisibleUI 	= false;
+local ToggleKey = Enum.KeyCode.RightControl;
+local Cooldown = false;
+
+UserInputService.InputBegan:Connect(function(Key)
+
+	if Key.KeyCode == ToggleKey then
+
+		Cooldown = true;
+
+		if VisibleUI == true then
+		Library:OpenUI()
+	else
+		Library:CloseUI()
+	end
+
+	VisibleUI = not VisibleUI;
+
+end
+
+end)
+
+--// UI Dragging
+
+Mouse.Move:Connect(function()
+	
+	if CurrentMovingFrame ~= nil and NotDraggable[CurrentMovingFrame] then
+		return
+	end
+	
+	if CurrentMovingFrame ~= nil and HoldingLeftClick == true and tick() - OldTime > 0.1 then
+		
+		local NewX = Mouse.X
+		local Distance
+		
+		Dragging = true
+		
+		local Magnitude = math.sqrt((NewX - OldX) ^ 2 + (OldX - NewX) ^ 2)
+		
+		if OldX < NewX then
+			
+			-- Moved Left
+			Distance = math.ceil(math.abs(math.sqrt(NewX)) + math.abs(math.sqrt(NewX))) * 1.3
+			
+		elseif OldX > NewX then
+			
+			-- Moved Right
+			Distance = -math.abs(math.sqrt(NewX)) - math.sqrt(NewX) * 4
+			
+		end
+		
+		OldX = Mouse.X
+		
+		local TweenService = game:GetService("TweenService")
+		
+		if (Magnitude > 30) then
+			
+			if CurrentTween ~= nil then
+				CurrentTween:Cancel()
+			end
+			
+			if CurrentRotationTween ~= nil then
+				CurrentRotationTween:Cancel()
+			end
+			
+			CurrentRotationTween = TweenService:Create(CurrentMovingFrame, TweenInfo.new(2, Enum.EasingStyle.Cubic), {Rotation = Distance})
+			CurrentRotationTween:Play()
+			
+		else
+			
+			CurrentRotationTween = TweenService:Create(CurrentMovingFrame, TweenInfo.new(2, Enum.EasingStyle.Cubic), {Rotation = 0})
+			CurrentRotationTween:Play()
+			
+		end
+		
+		TweenService:Create(CurrentMovingFrame, TweenInfo.new(0.47, Enum.EasingStyle.Cubic), {Position = UDim2.new(0, Mouse.X - (CurrentMovingFrame.AbsoluteSize.X / 2) + 10, 0, Mouse.Y - (CurrentMovingFrame.AbsoluteSize.Y / 2))}):Play()
+		
+	end
+end)
+
+Mouse.Idle:Connect(function()
+	if CurrentMovingFrame ~= nil and HoldingLeftClick == true then
+		if CurrentTween ~= nil then
+			CurrentTween:Cancel()
+		end
+		if CurrentRotationTween ~= nil then
+			CurrentRotationTween:Cancel()
+		end
+		local TweenService = game:GetService("TweenService")
+		CurrentTween = TweenService:Create(CurrentMovingFrame, TweenInfo.new(0.57, Enum.EasingStyle.Quad), {Rotation = 0})
+		CurrentTween:Play()
+	end
+end)
+
+UserInputService.InputBegan:Connect(function(Key)
+	if Key.UserInputType == Enum.UserInputType.MouseButton1 then
+	HoldingLeftClick = true
+	OldTime = tick()
+	
+	for _, Menu in pairs(UILibrary:GetChildren()) do
+		if Menu.Name == "Menu" then
+	if CheckForHovering(Menu) then
+		CurrentMovingFrame = Menu
+	end
+end
+end
+end
+end)
+
+UserInputService.InputEnded:Connnect(function(Key)
+	if Key.UserInputType == Enum.UserInputType.MouseButton1 then
+	HoldingLeftClick = false
+	
+	if CurrentMovingFrame ~= nil then
+		
+		local TweenService = game:GetService("TweenService")
+		
+		local Tweening = nil
+		
+		Tweening = TweenService:Create(CurrentMovingFrame, TweenInfo.new(0.57, Enum.EasingStyle.Cubic), {Rotation = 0})
+		
+		Tweening:Play()
+	end
+	
+	Dragging = false
+	CurrentMovingFrame = nil
+end
+end)
+
+return Library
